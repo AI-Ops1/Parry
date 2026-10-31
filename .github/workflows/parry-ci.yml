@@ -1,0 +1,25 @@
+name: Parry AI Bug Verifier & Benchmark CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  parry-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run 25-Case Evil AI Benchmark
+        run: python3 parry.py bench
+
+      - name: Run Superpowers TDD Verification Suite
+        run: python3 test_parry_benchmark.py

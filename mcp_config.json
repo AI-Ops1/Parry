@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "parry": {
+      "command": "python",
+      "args": ["parry.py", "mcp"],
+      "env": {
+        "GEMINI_API_KEY": "",
+        "ANTHROPIC_API_KEY": "",
+        "OPENAI_API_KEY": ""
+      }
+    }
+  }
+}

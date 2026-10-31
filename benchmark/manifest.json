@@ -1,0 +1,177 @@
+[
+  {
+    "id": 1,
+    "file": "benchmark/cases/01_py_slopsquat_arangodb.py",
+    "language": "python",
+    "expected_rule": "PARRY-HAL-PKG-PY",
+    "description": "Slopsquatted PyPI import (`arangodb_driver` instead of `python-arango`)"
+  },
+  {
+    "id": 2,
+    "file": "benchmark/cases/02_py_openai_v0_cutoff.py",
+    "language": "python",
+    "expected_rule": "PARRY-HAL-PY001",
+    "description": "Removed OpenAI v0.x `ChatCompletion.create` API emitted from pre-cutoff weights"
+  },
+  {
+    "id": 3,
+    "file": "benchmark/cases/03_py_pandas_df_append.py",
+    "language": "python",
+    "expected_rule": "PARRY-HAL-PY002",
+    "description": "Removed pandas 2.0 `df.append()` method causing runtime AttributeError"
+  },
+  {
+    "id": 4,
+    "file": "benchmark/cases/04_py_pydantic_v1_mixin.py",
+    "language": "python",
+    "expected_rule": "PARRY-HAL-PY003",
+    "description": "Legacy Pydantic v1 `.parse_obj()` and `.dict()` mixed into Pydantic v2 model"
+  },
+  {
+    "id": 5,
+    "file": "benchmark/cases/05_py_mutable_default_leak.py",
+    "language": "python",
+    "expected_rule": "PARRY-LOG-PY001",
+    "description": "Mutable default list `attempts=[]` leaking auth state across requests"
+  },
+  {
+    "id": 6,
+    "file": "benchmark/cases/06_py_sqli_fstring_query.py",
+    "language": "python",
+    "expected_rule": "PARRY-SEC-PY001",
+    "description": "SQL Injection via AI-generated f-string inside `cursor.execute()`"
+  },
+  {
+    "id": 7,
+    "file": "benchmark/cases/07_py_silent_except_pass.py",
+    "language": "python",
+    "expected_rule": "PARRY-ANT-PY002",
+    "description": "Silent `except Exception: pass` swallowing payment webhook errors"
+  },
+  {
+    "id": 8,
+    "file": "benchmark/cases/08_rs_async_thread_sleep.rs",
+    "language": "rust",
+    "expected_rule": "PARRY-LOG-RS001",
+    "description": "Blocking `std::thread::sleep` inside `async fn` starving Tokio executor threads"
+  },
+  {
+    "id": 9,
+    "file": "benchmark/cases/09_rs_negative_usize_cast.rs",
+    "language": "rust",
+    "expected_rule": "PARRY-LOG-RS002",
+    "description": "Unchecked `offset as usize` wrapping negative `i64` into `usize::MAX`"
+  },
+  {
+    "id": 10,
+    "file": "benchmark/cases/10_rs_hallucinated_crate.rs",
+    "language": "rust",
+    "expected_rule": "PARRY-HAL-PKG-RS",
+    "description": "Hallucinated `tokio_async_trait` crate import not in `Cargo.lock`"
+  },
+  {
+    "id": 11,
+    "file": "benchmark/cases/11_rs_obsolete_try_macro.rs",
+    "language": "rust",
+    "expected_rule": "PARRY-HAL-RS001",
+    "description": "Obsolete Rust 2015 `try!()` macro emitted instead of `?` operator"
+  },
+  {
+    "id": 12,
+    "file": "benchmark/cases/12_rs_collect_vec_len.rs",
+    "language": "rust",
+    "expected_rule": "PARRY-HAL-RS003",
+    "description": "Unnecessary O(N) heap allocation `.into_iter().collect::<Vec<_>>().len()`"
+  },
+  {
+    "id": 13,
+    "file": "benchmark/cases/13_rs_truncation_comment.rs",
+    "language": "rust",
+    "expected_rule": "PARRY-ANT-000",
+    "description": "Lazy AI truncation comment `// ... rest of code` deleting production logic"
+  },
+  {
+    "id": 14,
+    "file": "benchmark/cases/14_ts_lexicographical_sort.ts",
+    "language": "typescript",
+    "expected_rule": "PARRY-LOG-TS001",
+    "description": "Numeric array `.sort()` without comparator sorting `[100, 20]` as `[100, 20]`"
+  },
+  {
+    "id": 15,
+    "file": "benchmark/cases/15_ts_async_foreach_void.ts",
+    "language": "typescript",
+    "expected_rule": "PARRY-LOG-TS002",
+    "description": "Unawaited `Array.prototype.forEach(async ...)` dropping rejected promises"
+  },
+  {
+    "id": 16,
+    "file": "benchmark/cases/16_ts_stale_react_query.ts",
+    "language": "typescript",
+    "expected_rule": "PARRY-HAL-TS003",
+    "description": "Legacy `react-query` v3 import emitted instead of `@tanstack/react-query`"
+  },
+  {
+    "id": 17,
+    "file": "benchmark/cases/17_ts_xss_dangerous_html.ts",
+    "language": "typescript",
+    "expected_rule": "PARRY-SEC-TS001",
+    "description": "Unsanitized `dangerouslySetInnerHTML` XSS vector in AI-generated component"
+  },
+  {
+    "id": 18,
+    "file": "benchmark/cases/18_ts_unsafe_buffer_ctor.ts",
+    "language": "typescript",
+    "expected_rule": "PARRY-HAL-TS002",
+    "description": "Deprecated `new Buffer()` constructor emitted instead of `Buffer.from()`"
+  },
+  {
+    "id": 19,
+    "file": "benchmark/cases/19_ts_slopsquat_nextjs_auth.ts",
+    "language": "typescript",
+    "expected_rule": "PARRY-HAL-PKG-JS",
+    "description": "Hallucinated `nextjs-auth` npm import (slopsquatting risk vs `next-auth`)"
+  },
+  {
+    "id": 20,
+    "file": "benchmark/cases/20_js_numeric_sort_trap.js",
+    "language": "javascript",
+    "expected_rule": "PARRY-LOG-JS001",
+    "description": "Un-comparatored `.sort()` corrupting billing invoice order in JavaScript"
+  },
+  {
+    "id": 21,
+    "file": "benchmark/cases/21_js_foreach_async_drop.js",
+    "language": "javascript",
+    "expected_rule": "PARRY-LOG-JS002",
+    "description": "Broken async control flow inside `.forEach(async ...)` in Node worker"
+  },
+  {
+    "id": 22,
+    "file": "benchmark/cases/22_js_deprecated_substr.js",
+    "language": "javascript",
+    "expected_rule": "PARRY-HAL-JS001",
+    "description": "Deprecated `String.prototype.substr()` emitted by AI model"
+  },
+  {
+    "id": 23,
+    "file": "benchmark/cases/23_js_unsafe_buffer_alloc.js",
+    "language": "javascript",
+    "expected_rule": "PARRY-HAL-JS002",
+    "description": "Deprecated `Buffer()` constructor exposing uninitialized memory"
+  },
+  {
+    "id": 24,
+    "file": "benchmark/cases/24_js_slopsquat_fetch_hook.js",
+    "language": "javascript",
+    "expected_rule": "PARRY-HAL-PKG-JS",
+    "description": "Hallucinated `react-use-fetch-hook` npm require (slopsquatting vector)"
+  },
+  {
+    "id": 25,
+    "file": "benchmark/cases/25_js_lazy_existing_code_stub.js",
+    "language": "javascript",
+    "expected_rule": "PARRY-ANT-000",
+    "description": "AI truncation comment `// ... existing code` wiping out validation block"
+  }
+]
