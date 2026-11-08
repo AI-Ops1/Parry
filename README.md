@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-amber.svg)](LICENSE)
 [![Evil AI Benchmark](https://img.shields.io/badge/Evil_AI_Benchmark-25%2F25_Deflected_(100%25)-10b981)](benchmark/manifest.json)
-[![M8ven Score](https://m8ven.ai/badge/mcp/ai-ops1-parry-1kyvtu?v=8f66a7715ef46499a3a7bdc6fa313b3d)](https://m8ven.ai/mcp/ai-ops1-parry-1kyvtu?s=readme)
+[![M8ven Score](https://m8ven.ai/badge/mcp/ai-ops1-parry-1kyvtu?v=50d713f2742596e7bc85fbda2f479191)](https://m8ven.ai/mcp/ai-ops1-parry-1kyvtu?s=readme)
 
 > **Zero style nitpicks. 100% BYOK.** Catch hallucinated packages, training-cutoff API drift, async starvation, and subtle logic bugs in AI-written **Rust, Python, TypeScript, and JavaScript** code.
 > Built to plug directly into **Google Gemini**, **Claude Code / Claude Desktop**, **OpenAI Codex / ChatGPT**, **Cursor**, **Windsurf**, and **GitHub Actions**.
