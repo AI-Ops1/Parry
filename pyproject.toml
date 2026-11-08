@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "parry"
+version = "0.1.0"
+description = "Deterministic AST + neuro-symbolic verifier for AI-generated Rust, Python, TypeScript, and JavaScript code. Catches slopsquatted imports, cutoff-drift APIs, and async traps."
+readme = "README.md"
+authors = [
+  { name = "Scopeledger", email = "shahbaz@scopeledger.net" }
+]
+license = { text = "MIT" }
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Security",
+  "Topic :: Software Development :: Quality Assurance"
+]
+requires-python = ">=3.9"
+
+[project.urls]
+Homepage = "https://parry.scopeledger.net"
+Repository = "https://github.com/AI-Ops1/Parry"
+Documentation = "https://parry.scopeledger.net"
+Issues = "https://github.com/AI-Ops1/Parry/issues"
+Changelog = "https://github.com/AI-Ops1/Parry/releases"

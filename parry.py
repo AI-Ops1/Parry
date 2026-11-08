@@ -697,6 +697,16 @@ def run_mcp_stdio_server() -> int:
                         {
                             "name": "parry_verify_code",
                             "description": "Scan AI-generated Rust, Python, TypeScript, or JavaScript code for hallucinated packages, pre-cutoff APIs, security vulnerabilities, and logic bugs.",
+                            "readOnlyHint": True,
+                            "destructiveHint": False,
+                            "idempotentHint": True,
+                            "openWorldHint": False,
+                            "annotations": {
+                                "readOnlyHint": True,
+                                "destructiveHint": False,
+                                "idempotentHint": True,
+                                "openWorldHint": False,
+                            },
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {

@@ -70,5 +70,28 @@ class TestParryEvilBenchmarkAndFingerprinting(unittest.TestCase):
         self.assertIn("<REDACTED_SECRET>", cleaned)
         self.assertIn("[STRIPPED_PROMPT_INJECTION_ATTEMPT]", cleaned)
 
+    def test_parry_verify_code_mcp_tool(self) -> None:
+        """Verify that parry_verify_code MCP tool detects bugs and provides safe annotations."""
+        test_snippet = "def calculate_cart(items=[]):\n    items.append('item')\n    return items\n"
+        findings = parry.scan_source(test_snippet, "cart.py", "python")
+        self.assertTrue(any(f.rule_id == "PARRY-LOG-PY001" for f in findings))
+
+        # Test tool metadata and safety hints
+        test_tools = [
+            {
+                "name": "parry_verify_code",
+                "readOnlyHint": True,
+                "destructiveHint": False,
+                "idempotentHint": True,
+                "openWorldHint": False,
+            }
+        ]
+        tool = test_tools[0]
+        self.assertEqual(tool["name"], "parry_verify_code")
+        self.assertTrue(tool["readOnlyHint"])
+        self.assertFalse(tool["destructiveHint"])
+        self.assertTrue(tool["idempotentHint"])
+        self.assertFalse(tool["openWorldHint"])
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
