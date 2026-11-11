@@ -69,6 +69,15 @@ python parry.py init --baseline .
 
 # 4. Start the MCP stdio server for AI coding agents
 python parry.py mcp
+
+# 5. Automatically repair deterministic AI hallucinations & defects
+python parry.py fix path/to/code
+
+# 6. Show agent prompt remediation patches & auto-fix diffs
+python parry.py check path/to/code --fix
+
+# 7. Machine-readable JSON output for automated agent pipelines
+python parry.py check path/to/code --format json
 ```
 
 ## 💾 Low on `C:` Drive Space on Windows? (`D:\Parry` Setup)

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import difflib
 from dataclasses import asdict, dataclass
 import hashlib
 import json
@@ -42,6 +43,8 @@ class Finding:
     message: str
     suggestion: str
     generated_test: Optional[str] = None
+    prompt_injection_patch: Optional[str] = None
+    suggested_replacement: Optional[str] = None
 
 
 def compute_ast_fingerprint(
@@ -63,6 +66,174 @@ def find_enclosing_symbol(source: str, line_no: int) -> str:
         if m:
             return m.group(1)
     return "<module>"
+
+
+def compute_remediation(
+    rule_id: str, raw_line: str, language: str
+) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Generate an agent-targeted remediation prompt and a deterministic single-line replacement (if safe).
+    Returns (prompt_injection_patch, suggested_replacement).
+    """
+    prompt: Optional[str] = None
+    replacement: Optional[str] = None
+
+    if rule_id in ("PARRY-HAL-TS001", "PARRY-HAL-JS001"):
+        prompt = "Deprecated String.prototype.substr() detected. Replace .substr(start, length) with .slice(start, end)."
+        replacement = re.sub(r"\.substr\s*\(", ".slice(", raw_line)
+
+    elif rule_id in ("PARRY-HAL-TS002", "PARRY-HAL-JS002"):
+        prompt = "Deprecated and unsafe Buffer() constructor detected. Replace 'new Buffer(arg)' or 'Buffer(arg)' with 'Buffer.from(arg)' for data or 'Buffer.alloc(arg)' for size allocation."
+        if re.search(r"\b(?:new\s+)?Buffer\s*\(\s*\d+\s*\)", raw_line):
+            replacement = re.sub(r"\b(?:new\s+)?Buffer\s*\(", "Buffer.alloc(", raw_line)
+        else:
+            replacement = re.sub(r"\b(?:new\s+)?Buffer\s*\(", "Buffer.from(", raw_line)
+
+    elif rule_id == "PARRY-HAL-TS003":
+        prompt = "Legacy react-query v3 import detected. Replace 'from \"react-query\"' with 'from \"@tanstack/react-query\"'."
+        replacement = re.sub(r"([\'\"])react-query([\'\"])", r"\1@tanstack/react-query\2", raw_line)
+
+    elif rule_id == "PARRY-HAL-PY004":
+        prompt = "datetime.utcnow() produces naive UTC timestamps. Replace with 'datetime.now(datetime.timezone.utc)'."
+        replacement = raw_line.replace("datetime.utcnow()", "datetime.now(datetime.timezone.utc)")
+
+    elif rule_id == "PARRY-HAL-RS001":
+        prompt = "Obsolete Rust 2015 try!(...) macro detected. Replace 'try!(expr)' with 'expr?'."
+        m = re.search(r"\btry!\s*\(", raw_line)
+        if m:
+            start = m.end()
+            depth = 1
+            end = -1
+            for i in range(start, len(raw_line)):
+                if raw_line[i] == "(":
+                    depth += 1
+                elif raw_line[i] == ")":
+                    depth -= 1
+                    if depth == 0:
+                        end = i
+                        break
+            if end != -1:
+                inner = raw_line[start:end].strip()
+                replacement = raw_line[:m.start()] + inner + "?" + raw_line[end + 1:]
+
+    elif rule_id == "PARRY-HAL-RS002":
+        prompt = "Deprecated std::sync::ONCE_INIT constant detected. Replace with 'std::sync::Once::new()' or 'std::sync::OnceLock'."
+        replacement = raw_line.replace("std::sync::ONCE_INIT", "std::sync::Once::new()")
+
+    elif rule_id == "PARRY-HAL-RS003":
+        prompt = "Unnecessary O(N) allocation .collect::<Vec<_>>().len() to count items. Replace with '.into_iter().count()' or direct '.len()'."
+        replacement = raw_line.replace(".into_iter().collect::<Vec<_>>().len()", ".into_iter().count()")
+
+    elif rule_id in ("PARRY-LOG-TS001", "PARRY-LOG-JS001"):
+        prompt = "Lexicographical .sort() sorts numbers alphabetically. Provide an explicit numeric comparator: '.sort((a, b) => a - b)'."
+        replacement = re.sub(r"\.sort\s*\(\s*\)", ".sort((a, b) => a - b)", raw_line)
+
+    elif rule_id == "PARRY-SEC-PY002":
+        prompt = "Command injection risk: shell=True in subprocess. Remove shell=True and pass command arguments as a list."
+        replacement = re.sub(r"shell\s*=\s*True", "shell=False", raw_line)
+
+    elif rule_id == "PARRY-SEC-PY003":
+        prompt = "TLS certificate validation disabled with verify=False. Remove verify=False to enforce secure HTTPS certificate validation."
+        replacement = re.sub(r",\s*verify\s*=\s*False", "", raw_line)
+
+    elif rule_id == "PARRY-HAL-PY001":
+        prompt = "Removed OpenAI v0.x API openai.ChatCompletion.create() called. Migrate to modern OpenAI v1+ SDK: 'client = OpenAI(); client.chat.completions.create(model=..., messages=...)'."
+
+    elif rule_id == "PARRY-HAL-PY002":
+        prompt = "Removed pandas DataFrame.append() called. Migrate to pandas 2.0+: use 'pd.concat([df, new_df], ignore_index=True)'."
+
+    elif rule_id == "PARRY-HAL-PY003":
+        prompt = "Legacy Pydantic v1 method (.dict() / @validator / parse_obj_as) detected. Migrate to Pydantic v2: use .model_dump() and @field_validator."
+        if ".dict()" in raw_line:
+            replacement = raw_line.replace(".dict()", ".model_dump()")
+
+    elif rule_id == "PARRY-LOG-PY001":
+        prompt = "Mutable default argument in function leaks state across invocations. Change parameter default to None and initialize inside function: 'if arg is None: arg = []'."
+
+    elif rule_id == "PARRY-ANT-PY002":
+        prompt = "Silent 'except: pass' swallows runtime exceptions and hides defects. Log the exception or re-raise with context: 'logger.exception(\"Error details\")'."
+
+    elif rule_id == "PARRY-SEC-PY001":
+        prompt = "SQL injection vulnerability: String interpolation in .execute(). Use parameterized queries: 'cursor.execute(\"SELECT * FROM tbl WHERE id = ?\", (val,))'."
+
+    elif rule_id == "PARRY-SEC-TS001":
+        prompt = "Cross-Site Scripting (XSS) vulnerability via dangerouslySetInnerHTML. Sanitize HTML with 'DOMPurify.sanitize(rawHtml)' before injection."
+
+    elif rule_id in ("PARRY-LOG-TS002", "PARRY-LOG-JS002"):
+        prompt = "Broken async control flow: .forEach(async ...) does not await promises and drops rejected promises. Use 'for (const item of items) { await ... }' or 'await Promise.all(items.map(async ...))'."
+
+    elif rule_id == "PARRY-LOG-RS001":
+        prompt = "Blocking IO inside async fn starves the async executor thread pool. Replace with 'tokio::time::sleep(...).await' or 'tokio::task::spawn_blocking'."
+
+    elif rule_id == "PARRY-LOG-RS002":
+        prompt = "Unchecked numeric cast 'as usize' / 'as u32' wraps negative integers to large positive values. Use 'usize::try_from(val)?'."
+
+    elif rule_id == "PARRY-SEC-RS001":
+        prompt = "AI-introduced unsafe block requires manual verification. Replace with safe Rust standard library abstractions or document a `# Safety` invariant."
+
+    elif rule_id == "PARRY-ANT-000":
+        prompt = "[CRITICAL] Code truncation stub detected ('rest of code'). The model omitted implementation logic. Re-generate and output the complete function without placeholders."
+
+    elif rule_id.startswith("PARRY-HAL-PKG-"):
+        prompt = "Non-existent or slopsquatted package import detected. Remove import and install verified official package."
+
+    if replacement == raw_line:
+        replacement = None
+
+    return prompt, replacement
+
+
+def apply_fixes_to_source(source: str, findings: List[Finding]) -> Tuple[str, List[Finding]]:
+    """
+    Apply all deterministic single-line replacements to source text.
+    Returns (updated_source, list_of_applied_findings).
+    """
+    lines = source.splitlines()
+    applied: List[Finding] = []
+    fixable = [f for f in findings if f.suggested_replacement and 0 < f.line <= len(lines)]
+    fixable.sort(key=lambda x: x.line, reverse=True)
+
+    for f in fixable:
+        line_idx = f.line - 1
+        current_line = lines[line_idx]
+        if f.suggested_replacement and current_line != f.suggested_replacement:
+            lines[line_idx] = f.suggested_replacement
+            applied.append(f)
+
+    ending = "\n" if source.endswith("\n") else ""
+    return "\n".join(lines) + ending, applied
+
+
+def generate_unified_diff(original: str, fixed: str, filename: str) -> str:
+    """Generate a clean standard unified diff comparing original and repaired code."""
+    orig_lines = original.splitlines(keepends=True)
+    fixed_lines = fixed.splitlines(keepends=True)
+    diff = difflib.unified_diff(
+        orig_lines,
+        fixed_lines,
+        fromfile=f"a/{filename}",
+        tofile=f"b/{filename}",
+    )
+    return "".join(diff)
+
+
+def apply_fixes_to_file(file_path: pathlib.Path, dry_run: bool = False) -> Tuple[bool, str, List[Finding]]:
+    """
+    Scan a file, compute deterministic fixes, and optionally write back to disk.
+    Returns (has_changes, diff_string, applied_findings).
+    """
+    findings = scan_file(file_path)
+    if not findings:
+        return False, "", []
+    original_code = file_path.read_text(encoding="utf-8", errors="replace")
+    fixed_code, applied = apply_fixes_to_source(original_code, findings)
+    if not applied or fixed_code == original_code:
+        return False, "", []
+    diff_str = generate_unified_diff(original_code, fixed_code, str(file_path))
+    if not dry_run:
+        file_path.write_text(fixed_code, encoding="utf-8")
+    return True, diff_str, applied
+
 
 
 # ---------------------------------------------------------------------------
@@ -348,6 +519,8 @@ def analyze_python_ast(source: str, file_path: str) -> List[Finding]:
                                 f"def test_{node.name}_no_shared_state():\n"
                                 f"    assert {node.name}('a') is not {node.name}('b')"
                             ),
+                            prompt_injection_patch=compute_remediation("PARRY-LOG-PY001", raw_line, "python")[0],
+                            suggested_replacement=compute_remediation("PARRY-LOG-PY001", raw_line, "python")[1],
                         )
                     )
 
@@ -368,6 +541,8 @@ def analyze_python_ast(source: str, file_path: str) -> List[Finding]:
                         fingerprint=compute_ast_fingerprint(file_path, "PARRY-ANT-PY002", sym, raw_line),
                         message="Silent `except ...: pass` swallows runtime exceptions and masks failures.",
                         suggestion="Log the exception or re-raise with context.",
+                        prompt_injection_patch=compute_remediation("PARRY-ANT-PY002", raw_line, "python")[0],
+                        suggested_replacement=compute_remediation("PARRY-ANT-PY002", raw_line, "python")[1],
                     )
                 )
 
@@ -392,6 +567,8 @@ def analyze_python_ast(source: str, file_path: str) -> List[Finding]:
                         fingerprint=compute_ast_fingerprint(file_path, "PARRY-HAL-PKG-PY", "<module>", raw_line),
                         message=SUSPICIOUS_AI_PACKAGES["python"][mod_name],
                         suggestion="Verify package against `uv.lock` / `pyproject.toml` and PyPI.",
+                        prompt_injection_patch=compute_remediation("PARRY-HAL-PKG-PY", raw_line, "python")[0],
+                        suggested_replacement=compute_remediation("PARRY-HAL-PKG-PY", raw_line, "python")[1],
                     )
                 )
 
@@ -421,6 +598,8 @@ def analyze_pattern_rules(source: str, file_path: str, language: str) -> List[Fi
                         fingerprint=compute_ast_fingerprint(file_path, "PARRY-HAL-PKG-JS", "<module>", line),
                         message=SUSPICIOUS_AI_PACKAGES[language][pkg],
                         suggestion="Verify dependency in `package.json` and `package-lock.json`.",
+                        prompt_injection_patch=compute_remediation("PARRY-HAL-PKG-JS", line, language)[0],
+                        suggested_replacement=compute_remediation("PARRY-HAL-PKG-JS", line, language)[1],
                     )
                 )
     elif language == "rust":
@@ -442,6 +621,8 @@ def analyze_pattern_rules(source: str, file_path: str, language: str) -> List[Fi
                         fingerprint=compute_ast_fingerprint(file_path, "PARRY-HAL-PKG-RS", "<module>", line),
                         message=SUSPICIOUS_AI_PACKAGES["rust"][crate_name],
                         suggestion="Check `Cargo.toml` and `Cargo.lock` for valid crate names.",
+                        prompt_injection_patch=compute_remediation("PARRY-HAL-PKG-RS", line, "rust")[0],
+                        suggested_replacement=compute_remediation("PARRY-HAL-PKG-RS", line, "rust")[1],
                     )
                 )
 
@@ -464,6 +645,8 @@ def analyze_pattern_rules(source: str, file_path: str, language: str) -> List[Fi
                     fingerprint=compute_ast_fingerprint(file_path, rule_id, sym, raw_line),
                     message=msg,
                     suggestion=fix,
+                    prompt_injection_patch=compute_remediation(rule_id, raw_line, language)[0],
+                    suggested_replacement=compute_remediation(rule_id, raw_line, language)[1],
                 )
             )
 
@@ -486,6 +669,8 @@ def analyze_pattern_rules(source: str, file_path: str, language: str) -> List[Fi
                     fingerprint=compute_ast_fingerprint(file_path, rule_id, sym, raw_line),
                     message=msg,
                     suggestion=fix,
+                    prompt_injection_patch=compute_remediation(rule_id, raw_line, language)[0],
+                    suggested_replacement=compute_remediation(rule_id, raw_line, language)[1],
                 )
             )
 
@@ -511,6 +696,8 @@ def analyze_pattern_rules(source: str, file_path: str, language: str) -> List[Fi
                 fingerprint=compute_ast_fingerprint(file_path, "PARRY-ANT-000", sym, raw_line),
                 message="AI truncation comment detected (`rest of code` / `existing code`).",
                 suggestion="Restore deleted production logic from git HEAD before committing.",
+                prompt_injection_patch=compute_remediation("PARRY-ANT-000", raw_line, language)[0],
+                suggested_replacement=compute_remediation("PARRY-ANT-000", raw_line, language)[1],
             )
         )
 
@@ -719,6 +906,32 @@ def run_mcp_stdio_server() -> int:
                                 },
                                 "required": ["language", "code"],
                             },
+                        },
+                        {
+                            "name": "parry_fix_code",
+                            "description": "Auto-remediate deterministic AI hallucinations, deprecated APIs, and security defects, returning patched code and unified diff.",
+                            "readOnlyHint": True,
+                            "destructiveHint": False,
+                            "idempotentHint": True,
+                            "openWorldHint": False,
+                            "annotations": {
+                                "readOnlyHint": True,
+                                "destructiveHint": False,
+                                "idempotentHint": True,
+                                "openWorldHint": False,
+                            },
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "language": {
+                                        "type": "string",
+                                        "enum": ["python", "rust", "typescript", "javascript"],
+                                    },
+                                    "file_path": {"type": "string"},
+                                    "code": {"type": "string"},
+                                },
+                                "required": ["language", "code"],
+                            },
                         }
                     ]
                 },
@@ -742,6 +955,35 @@ def run_mcp_stdio_server() -> int:
                             {
                                 "type": "text",
                                 "text": json.dumps([asdict(f) for f in findings], indent=2),
+                            }
+                        ]
+                    },
+                }
+                sys.stdout.write(json.dumps(resp) + "\n")
+                sys.stdout.flush()
+
+            elif tool_name == "parry_fix_code":
+                lang = args.get("language", "python")
+                fpath = args.get("file_path", f"snippet.{lang}")
+                code = args.get("code", "")
+                findings = scan_source(code, fpath, lang)
+                fixed_code, applied = apply_fixes_to_source(code, findings)
+                diff_str = generate_unified_diff(code, fixed_code, fpath) if applied else ""
+                payload = {
+                    "fixed_count": len(applied),
+                    "remaining_findings_count": len(findings) - len(applied),
+                    "unified_diff": diff_str,
+                    "patched_code": fixed_code,
+                    "findings": [asdict(f) for f in findings],
+                }
+                resp = {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": json.dumps(payload, indent=2),
                             }
                         ]
                     },
@@ -802,12 +1044,19 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_check = sub.add_parser("check", help="Scan files or directories for AI-written bugs")
     p_check.add_argument("paths", nargs="+", help="Files or directories to scan")
     p_check.add_argument("--baseline", default=".parry-baseline.json", help="Baseline suppression file")
+    p_check.add_argument("--fix", action="store_true", help="Output LLM prompt patches and deterministic auto-fix diffs")
+    p_check.add_argument("--in-place", action="store_true", help="Apply deterministic fixes in-place (requires --fix)")
+    p_check.add_argument("--format", choices=["cli", "json"], default="cli", help="Output format")
     p_check.add_argument(
         "--provider",
         choices=["none", "gemini", "claude", "openai", "codex", "ollama"],
         default="none",
         help="Optional BYOK AI provider for Stage 3 deep semantic critique",
     )
+
+    p_fix = sub.add_parser("fix", help="Automatically repair deterministic AI bugs in-place")
+    p_fix.add_argument("paths", nargs="+", help="Files or directories to repair")
+    p_fix.add_argument("--dry-run", action="store_true", help="Show proposed diff without modifying files on disk")
 
     p_init = sub.add_parser("init", help="Initialize baseline suppression file for legacy repos")
     p_init.add_argument("--baseline", action="store_true", help="Write .parry-baseline.json")
@@ -838,6 +1087,33 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"[OK] Baseline saved to {out_file} ({len(payload['fingerprints'])} existing findings muted).")
         return 0
 
+    if args.cmd == "fix":
+        targets: List[pathlib.Path] = []
+        for raw in args.paths:
+            p = pathlib.Path(raw)
+            if p.is_dir():
+                for child in sorted(p.rglob("*")):
+                    if child.is_file() and detect_language(child):
+                        targets.append(child)
+            elif p.is_file():
+                targets.append(p)
+
+        total_repaired = 0
+        for target in targets:
+            changed, diff_str, applied = apply_fixes_to_file(target, dry_run=args.dry_run)
+            if changed:
+                total_repaired += len(applied)
+                label = "[DRY-RUN]" if args.dry_run else "[FIXED]"
+                print(f"{label} Repaired {len(applied)} issue(s) in {target}")
+                if diff_str:
+                    print(diff_str)
+
+        if total_repaired == 0:
+            print("[OK] No deterministic auto-fixes needed.")
+        else:
+            print(f"[OK] Total deterministic issues repaired: {total_repaired}")
+        return 0
+
     if args.cmd == "check":
         baseline_fps: set[str] = set()
         bpath = pathlib.Path(args.baseline)
@@ -846,22 +1122,44 @@ def main(argv: Optional[List[str]] = None) -> int:
             baseline_fps = set(data.get("fingerprints", []))
 
         all_findings = []
+        target_files: List[pathlib.Path] = []
         for raw in args.paths:
             p = pathlib.Path(raw)
             if p.is_dir():
                 for child in sorted(p.rglob("*")):
                     if child.is_file() and detect_language(child):
+                        target_files.append(child)
                         all_findings.extend(scan_file(child, baseline_fps))
             elif p.is_file():
+                target_files.append(p)
                 all_findings.extend(scan_file(p, baseline_fps))
+
+        if args.format == "json":
+            print(json.dumps([asdict(f) for f in all_findings], indent=2))
+            return 1 if all_findings else 0
 
         if not all_findings:
             print("[OK] Parry deflected 0 issues (clean diff).")
             return 0
+
         for f in all_findings:
             print(f"[{f.rule_id}] ({f.category}) {f.file_path}:{f.line}:{f.column} [fn: {f.enclosing_symbol} | fp: {f.fingerprint}]")
             print(f"  |- Issue: {f.message}")
             print(f"  +- Fix:   {f.suggestion}")
+            if args.fix:
+                if f.prompt_injection_patch:
+                    print(f"  +- Agent Prompt: {f.prompt_injection_patch}")
+                if f.suggested_replacement:
+                    print(f"  +- Auto-Patch:   {f.suggested_replacement.strip()}")
+
+        if args.fix and args.in_place:
+            seen_files = sorted({pathlib.Path(f.file_path) for f in all_findings})
+            for tf in seen_files:
+                changed, diff_str, applied = apply_fixes_to_file(tf, dry_run=False)
+                if changed:
+                    print(f"[AUTO-FIXED] Applied {len(applied)} repair(s) to {tf}")
+                    print(diff_str)
+
         return 1
 
     return 0
