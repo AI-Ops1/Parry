@@ -2,176 +2,1324 @@
   {
     "id": 1,
     "file": "benchmark/cases/01_py_slopsquat_arangodb.py",
+    "clean_file": "benchmark/clean/01_py_slopsquat_arangodb.py",
     "language": "python",
+    "category": "Hallucination",
     "expected_rule": "PARRY-HAL-PKG-PY",
-    "description": "Slopsquatted PyPI import (`arangodb_driver` instead of `python-arango`)"
+    "description": "Slopsquatted PyPI import (`arangodb_driver` instead of `python-arango`)",
+    "models_failing": []
   },
   {
     "id": 2,
     "file": "benchmark/cases/02_py_openai_v0_cutoff.py",
+    "clean_file": "benchmark/clean/02_py_openai_v0_cutoff.py",
     "language": "python",
+    "category": "Hallucination",
     "expected_rule": "PARRY-HAL-PY001",
-    "description": "Removed OpenAI v0.x `ChatCompletion.create` API emitted from pre-cutoff weights"
+    "description": "Removed OpenAI v0.x `ChatCompletion.create` API emitted from pre-cutoff weights",
+    "models_failing": []
   },
   {
     "id": 3,
     "file": "benchmark/cases/03_py_pandas_df_append.py",
+    "clean_file": "benchmark/clean/03_py_pandas_df_append.py",
     "language": "python",
+    "category": "Hallucination",
     "expected_rule": "PARRY-HAL-PY002",
-    "description": "Removed pandas 2.0 `df.append()` method causing runtime AttributeError"
+    "description": "Removed pandas 2.0 `df.append()` method causing runtime AttributeError",
+    "models_failing": []
   },
   {
     "id": 4,
     "file": "benchmark/cases/04_py_pydantic_v1_mixin.py",
+    "clean_file": "benchmark/clean/04_py_pydantic_v1_mixin.py",
     "language": "python",
+    "category": "Hallucination",
     "expected_rule": "PARRY-HAL-PY003",
-    "description": "Legacy Pydantic v1 `.parse_obj()` and `.dict()` mixed into Pydantic v2 model"
+    "description": "Legacy Pydantic v1 `.parse_obj()` and `.dict()` mixed into Pydantic v2 model",
+    "models_failing": []
   },
   {
     "id": 5,
     "file": "benchmark/cases/05_py_mutable_default_leak.py",
+    "clean_file": "benchmark/clean/05_py_mutable_default_leak.py",
     "language": "python",
+    "category": "Logic",
     "expected_rule": "PARRY-LOG-PY001",
-    "description": "Mutable default list `attempts=[]` leaking auth state across requests"
+    "description": "Mutable default list `attempts=[]` leaking auth state across requests",
+    "models_failing": []
   },
   {
     "id": 6,
     "file": "benchmark/cases/06_py_sqli_fstring_query.py",
+    "clean_file": "benchmark/clean/06_py_sqli_fstring_query.py",
     "language": "python",
+    "category": "Security",
     "expected_rule": "PARRY-SEC-PY001",
-    "description": "SQL Injection via AI-generated f-string inside `cursor.execute()`"
+    "description": "SQL Injection via AI-generated f-string inside `cursor.execute()`",
+    "models_failing": []
   },
   {
     "id": 7,
     "file": "benchmark/cases/07_py_silent_except_pass.py",
+    "clean_file": "benchmark/clean/07_py_silent_except_pass.py",
     "language": "python",
+    "category": "AI Anti-Pattern",
     "expected_rule": "PARRY-ANT-PY002",
-    "description": "Silent `except Exception: pass` swallowing payment webhook errors"
+    "description": "Silent `except Exception: pass` swallowing payment webhook errors",
+    "models_failing": []
   },
   {
     "id": 8,
     "file": "benchmark/cases/08_rs_async_thread_sleep.rs",
+    "clean_file": "benchmark/clean/08_rs_async_thread_sleep.rs",
     "language": "rust",
+    "category": "Logic",
     "expected_rule": "PARRY-LOG-RS001",
-    "description": "Blocking `std::thread::sleep` inside `async fn` starving Tokio executor threads"
+    "description": "Blocking `std::thread::sleep` inside `async fn` starving Tokio executor threads",
+    "models_failing": [
+      "cursor"
+    ]
   },
   {
     "id": 9,
     "file": "benchmark/cases/09_rs_negative_usize_cast.rs",
+    "clean_file": "benchmark/clean/09_rs_negative_usize_cast.rs",
     "language": "rust",
+    "category": "Logic",
     "expected_rule": "PARRY-LOG-RS002",
-    "description": "Unchecked `offset as usize` wrapping negative `i64` into `usize::MAX`"
+    "description": "Unchecked `offset as usize` wrapping negative `i64` into `usize::MAX`",
+    "models_failing": [
+      "cursor"
+    ]
   },
   {
     "id": 10,
     "file": "benchmark/cases/10_rs_hallucinated_crate.rs",
+    "clean_file": "benchmark/clean/10_rs_hallucinated_crate.rs",
     "language": "rust",
+    "category": "Hallucination",
     "expected_rule": "PARRY-HAL-PKG-RS",
-    "description": "Hallucinated `tokio_async_trait` crate import not in `Cargo.lock`"
+    "description": "Hallucinated `tokio_async_trait` crate import not in `Cargo.lock`",
+    "models_failing": [
+      "cursor"
+    ]
   },
   {
     "id": 11,
     "file": "benchmark/cases/11_rs_obsolete_try_macro.rs",
+    "clean_file": "benchmark/clean/11_rs_obsolete_try_macro.rs",
     "language": "rust",
+    "category": "Hallucination",
     "expected_rule": "PARRY-HAL-RS001",
-    "description": "Obsolete Rust 2015 `try!()` macro emitted instead of `?` operator"
+    "description": "Obsolete Rust 2015 `try!()` macro emitted instead of `?` operator",
+    "models_failing": [
+      "deepseek-v3",
+      "cursor"
+    ]
   },
   {
     "id": 12,
     "file": "benchmark/cases/12_rs_collect_vec_len.rs",
+    "clean_file": "benchmark/clean/12_rs_collect_vec_len.rs",
     "language": "rust",
+    "category": "Hallucination",
     "expected_rule": "PARRY-HAL-RS003",
-    "description": "Unnecessary O(N) heap allocation `.into_iter().collect::<Vec<_>>().len()`"
+    "description": "Unnecessary O(N) heap allocation `.into_iter().collect::<Vec<_>>().len()`",
+    "models_failing": [
+      "deepseek-v3",
+      "cursor"
+    ]
   },
   {
     "id": 13,
     "file": "benchmark/cases/13_rs_truncation_comment.rs",
+    "clean_file": "benchmark/clean/13_rs_truncation_comment.rs",
     "language": "rust",
+    "category": "AI Anti-Pattern",
     "expected_rule": "PARRY-ANT-000",
-    "description": "Lazy AI truncation comment `// ... rest of code` deleting production logic"
+    "description": "Lazy AI truncation comment `// ... rest of code` deleting production logic",
+    "models_failing": [
+      "deepseek-v3",
+      "cursor"
+    ]
   },
   {
     "id": 14,
     "file": "benchmark/cases/14_ts_lexicographical_sort.ts",
+    "clean_file": "benchmark/clean/14_ts_lexicographical_sort.ts",
     "language": "typescript",
+    "category": "Logic",
     "expected_rule": "PARRY-LOG-TS001",
-    "description": "Numeric array `.sort()` without comparator sorting `[100, 20]` as `[100, 20]`"
+    "description": "Numeric array `.sort()` without comparator sorting `[100, 20]` as `[100, 20]`",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
   },
   {
     "id": 15,
     "file": "benchmark/cases/15_ts_async_foreach_void.ts",
+    "clean_file": "benchmark/clean/15_ts_async_foreach_void.ts",
     "language": "typescript",
+    "category": "Logic",
     "expected_rule": "PARRY-LOG-TS002",
-    "description": "Unawaited `Array.prototype.forEach(async ...)` dropping rejected promises"
+    "description": "Unawaited `Array.prototype.forEach(async ...)` dropping rejected promises",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
   },
   {
     "id": 16,
     "file": "benchmark/cases/16_ts_stale_react_query.ts",
+    "clean_file": "benchmark/clean/16_ts_stale_react_query.ts",
     "language": "typescript",
+    "category": "Hallucination",
     "expected_rule": "PARRY-HAL-TS003",
-    "description": "Legacy `react-query` v3 import emitted instead of `@tanstack/react-query`"
+    "description": "Legacy `react-query` v3 import emitted instead of `@tanstack/react-query`",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
   },
   {
     "id": 17,
     "file": "benchmark/cases/17_ts_xss_dangerous_html.ts",
+    "clean_file": "benchmark/clean/17_ts_xss_dangerous_html.ts",
     "language": "typescript",
+    "category": "Security",
     "expected_rule": "PARRY-SEC-TS001",
-    "description": "Unsanitized `dangerouslySetInnerHTML` XSS vector in AI-generated component"
+    "description": "Unsanitized `dangerouslySetInnerHTML` XSS vector in AI-generated component",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
   },
   {
     "id": 18,
     "file": "benchmark/cases/18_ts_unsafe_buffer_ctor.ts",
+    "clean_file": "benchmark/clean/18_ts_unsafe_buffer_ctor.ts",
     "language": "typescript",
+    "category": "Hallucination",
     "expected_rule": "PARRY-HAL-TS002",
-    "description": "Deprecated `new Buffer()` constructor emitted instead of `Buffer.from()`"
+    "description": "Deprecated `new Buffer()` constructor emitted instead of `Buffer.from()`",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
   },
   {
     "id": 19,
     "file": "benchmark/cases/19_ts_slopsquat_nextjs_auth.ts",
+    "clean_file": "benchmark/clean/19_ts_slopsquat_nextjs_auth.ts",
     "language": "typescript",
+    "category": "Hallucination",
     "expected_rule": "PARRY-HAL-PKG-JS",
-    "description": "Hallucinated `nextjs-auth` npm import (slopsquatting risk vs `next-auth`)"
+    "description": "Hallucinated `nextjs-auth` npm import (slopsquatting risk vs `next-auth`)",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
   },
   {
     "id": 20,
     "file": "benchmark/cases/20_js_numeric_sort_trap.js",
+    "clean_file": "benchmark/clean/20_js_numeric_sort_trap.js",
     "language": "javascript",
+    "category": "Logic",
     "expected_rule": "PARRY-LOG-JS001",
-    "description": "Un-comparatored `.sort()` corrupting billing invoice order in JavaScript"
+    "description": "Un-comparatored `.sort()` corrupting billing invoice order in JavaScript",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
   },
   {
     "id": 21,
     "file": "benchmark/cases/21_js_foreach_async_drop.js",
+    "clean_file": "benchmark/clean/21_js_foreach_async_drop.js",
     "language": "javascript",
+    "category": "Logic",
     "expected_rule": "PARRY-LOG-JS002",
-    "description": "Broken async control flow inside `.forEach(async ...)` in Node worker"
+    "description": "Broken async control flow inside `.forEach(async ...)` in Node worker",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
   },
   {
     "id": 22,
     "file": "benchmark/cases/22_js_deprecated_substr.js",
+    "clean_file": "benchmark/clean/22_js_deprecated_substr.js",
     "language": "javascript",
+    "category": "Hallucination",
     "expected_rule": "PARRY-HAL-JS001",
-    "description": "Deprecated `String.prototype.substr()` emitted by AI model"
+    "description": "Deprecated `String.prototype.substr()` emitted by AI model",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
   },
   {
     "id": 23,
     "file": "benchmark/cases/23_js_unsafe_buffer_alloc.js",
+    "clean_file": "benchmark/clean/23_js_unsafe_buffer_alloc.js",
     "language": "javascript",
+    "category": "Hallucination",
     "expected_rule": "PARRY-HAL-JS002",
-    "description": "Deprecated `Buffer()` constructor exposing uninitialized memory"
+    "description": "Deprecated `Buffer()` constructor exposing uninitialized memory",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
   },
   {
     "id": 24,
     "file": "benchmark/cases/24_js_slopsquat_fetch_hook.js",
+    "clean_file": "benchmark/clean/24_js_slopsquat_fetch_hook.js",
     "language": "javascript",
+    "category": "Hallucination",
     "expected_rule": "PARRY-HAL-PKG-JS",
-    "description": "Hallucinated `react-use-fetch-hook` npm require (slopsquatting vector)"
+    "description": "Hallucinated `react-use-fetch-hook` npm require (slopsquatting vector)",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
   },
   {
     "id": 25,
     "file": "benchmark/cases/25_js_lazy_existing_code_stub.js",
+    "clean_file": "benchmark/clean/25_js_lazy_existing_code_stub.js",
     "language": "javascript",
+    "category": "AI Anti-Pattern",
     "expected_rule": "PARRY-ANT-000",
-    "description": "AI truncation comment `// ... existing code` wiping out validation block"
+    "description": "AI truncation comment `// ... existing code` wiping out validation block",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 26,
+    "file": "benchmark/cases/26_py_datetime_utcnow_stale.py",
+    "clean_file": "benchmark/clean/26_py_datetime_utcnow_stale.py",
+    "language": "python",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-PY004",
+    "description": "Deprecated naive datetime.utcnow() producing timezone-unaware timestamp in Python 3.12+",
+    "models_failing": []
+  },
+  {
+    "id": 27,
+    "file": "benchmark/cases/27_py_slopsquat_boto3_async.py",
+    "clean_file": "benchmark/clean/27_py_slopsquat_boto3_async.py",
+    "language": "python",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-PKG-PY",
+    "description": "Slopsquatted boto3_async package import (real SDK is aiobotocore / boto3)",
+    "models_failing": []
+  },
+  {
+    "id": 28,
+    "file": "benchmark/cases/28_py_insecure_pickle_load.py",
+    "clean_file": "benchmark/clean/28_py_insecure_pickle_load.py",
+    "language": "python",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-PY004",
+    "description": "Arbitrary remote code execution via untrusted pickle.loads deserialization",
+    "models_failing": []
+  },
+  {
+    "id": 29,
+    "file": "benchmark/cases/29_py_hardcoded_aws_key.py",
+    "clean_file": "benchmark/clean/29_py_hardcoded_aws_key.py",
+    "language": "python",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-PY005",
+    "description": "Hardcoded AWS secret access key leaking production credentials in script",
+    "models_failing": []
+  },
+  {
+    "id": 30,
+    "file": "benchmark/cases/30_py_unsafe_yaml_load.py",
+    "clean_file": "benchmark/clean/30_py_unsafe_yaml_load.py",
+    "language": "python",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-PY006",
+    "description": "Unsafe yaml.load() call permitting arbitrary object instantiation without SafeLoader",
+    "models_failing": []
+  },
+  {
+    "id": 31,
+    "file": "benchmark/cases/31_py_assert_for_authorization.py",
+    "clean_file": "benchmark/clean/31_py_assert_for_authorization.py",
+    "language": "python",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-PY007",
+    "description": "Assert statement used for security/authorization check stripped when running with python -O",
+    "models_failing": []
+  },
+  {
+    "id": 32,
+    "file": "benchmark/cases/32_py_unclosed_file_resource.py",
+    "clean_file": "benchmark/clean/32_py_unclosed_file_resource.py",
+    "language": "python",
+    "category": "Logic",
+    "expected_rule": "PARRY-LOG-PY003",
+    "description": "Unclosed file descriptor leak: file opened without with context manager",
+    "models_failing": []
+  },
+  {
+    "id": 33,
+    "file": "benchmark/cases/33_py_mutate_list_during_iteration.py",
+    "clean_file": "benchmark/clean/33_py_mutate_list_during_iteration.py",
+    "language": "python",
+    "category": "Logic",
+    "expected_rule": "PARRY-LOG-PY004",
+    "description": "Modifying list length in-place while iterating over it skipping items",
+    "models_failing": []
+  },
+  {
+    "id": 34,
+    "file": "benchmark/cases/34_py_slopsquat_langchain_helpers.py",
+    "clean_file": "benchmark/clean/34_py_slopsquat_langchain_helpers.py",
+    "language": "python",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-PKG-PY",
+    "description": "Hallucinated langchain_community_helpers import from nonexistent PyPI package",
+    "models_failing": []
+  },
+  {
+    "id": 35,
+    "file": "benchmark/cases/35_py_fastapi_stale_on_event.py",
+    "clean_file": "benchmark/clean/35_py_fastapi_stale_on_event.py",
+    "language": "python",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-PY005",
+    "description": "Deprecated FastAPI @app.on_event('startup') emitted instead of lifespan context manager",
+    "models_failing": []
+  },
+  {
+    "id": 36,
+    "file": "benchmark/cases/36_py_pydantic_v2_basesettings_moved.py",
+    "clean_file": "benchmark/clean/36_py_pydantic_v2_basesettings_moved.py",
+    "language": "python",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-PY006",
+    "description": "BaseSettings imported directly from pydantic in Pydantic v2 (moved to pydantic_settings)",
+    "models_failing": []
+  },
+  {
+    "id": 37,
+    "file": "benchmark/cases/37_py_insecure_mktemp.py",
+    "clean_file": "benchmark/clean/37_py_insecure_mktemp.py",
+    "language": "python",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-PY008",
+    "description": "Insecure tempfile.mktemp() usage vulnerable to symlink race conditions",
+    "models_failing": []
+  },
+  {
+    "id": 38,
+    "file": "benchmark/cases/38_py_insecure_md5_hash.py",
+    "clean_file": "benchmark/clean/38_py_insecure_md5_hash.py",
+    "language": "python",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-PY009",
+    "description": "Insecure hashlib.md5 used for password/credential verification",
+    "models_failing": []
+  },
+  {
+    "id": 39,
+    "file": "benchmark/cases/39_py_jwt_verify_signature_disabled.py",
+    "clean_file": "benchmark/clean/39_py_jwt_verify_signature_disabled.py",
+    "language": "python",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-PY010",
+    "description": "JWT signature verification disabled via options={'verify_signature': False}",
+    "models_failing": []
+  },
+  {
+    "id": 40,
+    "file": "benchmark/cases/40_py_hollow_function_stub.py",
+    "clean_file": "benchmark/clean/40_py_hollow_function_stub.py",
+    "language": "python",
+    "category": "AI Anti-Pattern",
+    "expected_rule": "PARRY-ANT-PY001",
+    "description": "Hollow AI function stub with bare pass emitted in core calculation path",
+    "models_failing": []
+  },
+  {
+    "id": 41,
+    "file": "benchmark/cases/41_py_slopsquat_requests_redis.py",
+    "clean_file": "benchmark/clean/41_py_slopsquat_requests_redis.py",
+    "language": "python",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-PKG-PY",
+    "description": "Hallucinated requests_cache_redis package import (not an official PyPI package)",
+    "models_failing": []
+  },
+  {
+    "id": 42,
+    "file": "benchmark/cases/42_py_subprocess_shell_true.py",
+    "clean_file": "benchmark/clean/42_py_subprocess_shell_true.py",
+    "language": "python",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-PY002",
+    "description": "Command injection via subprocess.run with shell=True on formatted command string",
+    "models_failing": []
+  },
+  {
+    "id": 43,
+    "file": "benchmark/cases/43_py_tls_verify_false.py",
+    "clean_file": "benchmark/clean/43_py_tls_verify_false.py",
+    "language": "python",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-PY003",
+    "description": "Insecure requests.get with verify=False disabling SSL certificate validation",
+    "models_failing": []
+  },
+  {
+    "id": 44,
+    "file": "benchmark/cases/44_py_swallowed_exception_reraise.py",
+    "clean_file": "benchmark/clean/44_py_swallowed_exception_reraise.py",
+    "language": "python",
+    "category": "Logic",
+    "expected_rule": "PARRY-LOG-PY002",
+    "description": "Swallowing root cause exception by re-raising new exception without from e chaining",
+    "models_failing": []
+  },
+  {
+    "id": 45,
+    "file": "benchmark/cases/45_py_todo_stub_omission.py",
+    "clean_file": "benchmark/clean/45_py_todo_stub_omission.py",
+    "language": "python",
+    "category": "AI Anti-Pattern",
+    "expected_rule": "PARRY-ANT-000",
+    "description": "AI truncation comment # TODO: implement remaining logic deleting production code",
+    "models_failing": []
+  },
+  {
+    "id": 46,
+    "file": "benchmark/cases/46_ts_floating_promise_express.ts",
+    "clean_file": "benchmark/clean/46_ts_floating_promise_express.ts",
+    "language": "typescript",
+    "category": "Logic",
+    "expected_rule": "PARRY-LOG-TS003",
+    "description": "Floating unhandled promise in Express handler dropping unhandled rejection",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 47,
+    "file": "benchmark/cases/47_ts_strict_equality_nan.ts",
+    "clean_file": "benchmark/clean/47_ts_strict_equality_nan.ts",
+    "language": "typescript",
+    "category": "Logic",
+    "expected_rule": "PARRY-LOG-TS004",
+    "description": "Invalid NaN comparison (x === NaN is always false in JavaScript / TypeScript)",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 48,
+    "file": "benchmark/cases/48_ts_slopsquat_zustand_persist.ts",
+    "clean_file": "benchmark/clean/48_ts_slopsquat_zustand_persist.ts",
+    "language": "typescript",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-PKG-JS",
+    "description": "Hallucinated npm package zustand-persist-store (official is zustand/middleware)",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 49,
+    "file": "benchmark/cases/49_ts_react_18_stale_render.ts",
+    "clean_file": "benchmark/clean/49_ts_react_18_stale_render.ts",
+    "language": "typescript",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-TS004",
+    "description": "Deprecated ReactDOM.render removed in React 18+ (requires createRoot)",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 50,
+    "file": "benchmark/cases/50_ts_jwt_none_algorithm.ts",
+    "clean_file": "benchmark/clean/50_ts_jwt_none_algorithm.ts",
+    "language": "typescript",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-TS007",
+    "description": "JWT verification explicitly permitting 'none' algorithm allowing signature forgery",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 51,
+    "file": "benchmark/cases/51_ts_target_blank_missing_noopener.ts",
+    "clean_file": "benchmark/clean/51_ts_target_blank_missing_noopener.ts",
+    "language": "typescript",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-TS002",
+    "description": "Anchor with target='_blank' missing rel='noopener noreferrer' tabnabbing vulnerability",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 52,
+    "file": "benchmark/cases/52_ts_unchecked_json_parse.ts",
+    "clean_file": "benchmark/clean/52_ts_unchecked_json_parse.ts",
+    "language": "typescript",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-TS003",
+    "description": "Uncaught JSON.parse on untrusted user payload triggering unhandled SyntaxError crash",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 53,
+    "file": "benchmark/cases/53_ts_prototype_pollution_assign.ts",
+    "clean_file": "benchmark/clean/53_ts_prototype_pollution_assign.ts",
+    "language": "typescript",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-TS004",
+    "description": "Prototype pollution vulnerability: user-controlled object merged without __proto__ filter",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 54,
+    "file": "benchmark/cases/54_ts_insecure_math_random_token.ts",
+    "clean_file": "benchmark/clean/54_ts_insecure_math_random_token.ts",
+    "language": "typescript",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-TS006",
+    "description": "Cryptographically insecure Math.random() used to generate session secret / reset token",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 55,
+    "file": "benchmark/cases/55_ts_array_map_missing_return.ts",
+    "clean_file": "benchmark/clean/55_ts_array_map_missing_return.ts",
+    "language": "typescript",
+    "category": "Logic",
+    "expected_rule": "PARRY-LOG-TS006",
+    "description": "Array.prototype.map used as forEach without returning value producing array of undefined",
+    "models_failing": [
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 56,
+    "file": "benchmark/cases/56_js_child_process_exec_injection.js",
+    "clean_file": "benchmark/clean/56_js_child_process_exec_injection.js",
+    "language": "javascript",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-JS002",
+    "description": "Command injection via child_process.exec concatenating raw unsanitized user argument",
+    "models_failing": [
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 57,
+    "file": "benchmark/cases/57_js_slopsquat_lodash_uuid.js",
+    "clean_file": "benchmark/clean/57_js_slopsquat_lodash_uuid.js",
+    "language": "javascript",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-PKG-JS",
+    "description": "Hallucinated npm package lodash-uuid required (not a real package)",
+    "models_failing": [
+      "gemini-2.0-flash",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 58,
+    "file": "benchmark/cases/58_js_unintentional_global_leak.js",
+    "clean_file": "benchmark/clean/58_js_unintentional_global_leak.js",
+    "language": "javascript",
+    "category": "Logic",
+    "expected_rule": "PARRY-LOG-JS003",
+    "description": "Accidental global variable assignment leaking transaction across requests",
+    "models_failing": [
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 59,
+    "file": "benchmark/cases/59_js_rest_of_implementation_stub.js",
+    "clean_file": "benchmark/clean/59_js_rest_of_implementation_stub.js",
+    "language": "javascript",
+    "category": "AI Anti-Pattern",
+    "expected_rule": "PARRY-ANT-000",
+    "description": "AI truncation comment // ... rest of implementation omitting critical verification",
+    "models_failing": []
+  },
+  {
+    "id": 60,
+    "file": "benchmark/cases/60_js_deprecated_substr_usage.js",
+    "clean_file": "benchmark/clean/60_js_deprecated_substr_usage.js",
+    "language": "javascript",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-JS001",
+    "description": "Deprecated String.prototype.substr() emitted by model",
+    "models_failing": []
+  },
+  {
+    "id": 61,
+    "file": "benchmark/cases/61_ts_slopsquat_next_secure_cookies.ts",
+    "clean_file": "benchmark/clean/61_ts_slopsquat_next_secure_cookies.ts",
+    "language": "typescript",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-PKG-JS",
+    "description": "Hallucinated nextjs-secure-cookies import (slopsquatted package vector)",
+    "models_failing": []
+  },
+  {
+    "id": 62,
+    "file": "benchmark/cases/62_ts_sort_numeric_without_comparator.ts",
+    "clean_file": "benchmark/clean/62_ts_sort_numeric_without_comparator.ts",
+    "language": "typescript",
+    "category": "Logic",
+    "expected_rule": "PARRY-LOG-TS001",
+    "description": "Numeric balance sort without comparator sorting [10, 2] alphabetically as [10, 2]",
+    "models_failing": []
+  },
+  {
+    "id": 63,
+    "file": "benchmark/cases/63_ts_async_foreach_unawaited.ts",
+    "clean_file": "benchmark/clean/63_ts_async_foreach_unawaited.ts",
+    "language": "typescript",
+    "category": "Logic",
+    "expected_rule": "PARRY-LOG-TS002",
+    "description": "Unawaited forEach(async ...) dropping database writes before API response",
+    "models_failing": []
+  },
+  {
+    "id": 64,
+    "file": "benchmark/cases/64_ts_unsafe_buffer_constructor.ts",
+    "clean_file": "benchmark/clean/64_ts_unsafe_buffer_constructor.ts",
+    "language": "typescript",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-TS002",
+    "description": "Deprecated new Buffer(size) allocating uninitialized kernel memory",
+    "models_failing": []
+  },
+  {
+    "id": 65,
+    "file": "benchmark/cases/65_ts_dangerously_inner_html_xss.ts",
+    "clean_file": "benchmark/clean/65_ts_dangerously_inner_html_xss.ts",
+    "language": "typescript",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-TS001",
+    "description": "Direct unsanitized dangerouslySetInnerHTML injection from external feed",
+    "models_failing": []
+  },
+  {
+    "id": 66,
+    "file": "benchmark/cases/66_js_unsafe_buffer_alloc_leak.js",
+    "clean_file": "benchmark/clean/66_js_unsafe_buffer_alloc_leak.js",
+    "language": "javascript",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-JS002",
+    "description": "Deprecated Buffer(size) constructor in legacy JavaScript module",
+    "models_failing": []
+  },
+  {
+    "id": 67,
+    "file": "benchmark/cases/67_js_numeric_sort_trap_billing.js",
+    "clean_file": "benchmark/clean/67_js_numeric_sort_trap_billing.js",
+    "language": "javascript",
+    "category": "Logic",
+    "expected_rule": "PARRY-LOG-JS001",
+    "description": "Invoice fee amounts sorted with default lexicographical sort",
+    "models_failing": []
+  },
+  {
+    "id": 68,
+    "file": "benchmark/cases/68_js_foreach_async_drop_queue.js",
+    "clean_file": "benchmark/clean/68_js_foreach_async_drop_queue.js",
+    "language": "javascript",
+    "category": "Logic",
+    "expected_rule": "PARRY-LOG-JS002",
+    "description": "Async callback passed to forEach dropping promises in dispatch queue",
+    "models_failing": []
+  },
+  {
+    "id": 69,
+    "file": "benchmark/cases/69_js_existing_code_truncation.js",
+    "clean_file": "benchmark/clean/69_js_existing_code_truncation.js",
+    "language": "javascript",
+    "category": "AI Anti-Pattern",
+    "expected_rule": "PARRY-ANT-000",
+    "description": "AI truncation placeholder // ... existing code replacing validation rules",
+    "models_failing": []
+  },
+  {
+    "id": 70,
+    "file": "benchmark/cases/70_ts_slopsquat_react_fetch_hook.ts",
+    "clean_file": "benchmark/clean/70_ts_slopsquat_react_fetch_hook.ts",
+    "language": "typescript",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-PKG-JS",
+    "description": "Hallucinated react-use-fetch-hook package import",
+    "models_failing": []
+  },
+  {
+    "id": 71,
+    "file": "benchmark/cases/71_rs_anchor_missing_signer_check.rs",
+    "clean_file": "benchmark/clean/71_rs_anchor_missing_signer_check.rs",
+    "language": "rust",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-RS002",
+    "description": "Solana Anchor instruction using unvalidated AccountInfo instead of Signer for authority",
+    "models_failing": [
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 72,
+    "file": "benchmark/cases/72_rs_solana_arbitrary_cpi.rs",
+    "clean_file": "benchmark/clean/72_rs_solana_arbitrary_cpi.rs",
+    "language": "rust",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-RS003",
+    "description": "Solana arbitrary Cross-Program Invocation (CPI) without verifying target program ID",
+    "models_failing": [
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 73,
+    "file": "benchmark/cases/73_rs_unchecked_token_mint_overflow.rs",
+    "clean_file": "benchmark/clean/73_rs_unchecked_token_mint_overflow.rs",
+    "language": "rust",
+    "category": "Logic",
+    "expected_rule": "PARRY-LOG-RS003",
+    "description": "Unchecked arithmetic addition in token mint calculation risking overflow",
+    "models_failing": [
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 74,
+    "file": "benchmark/cases/74_rs_slopsquat_anchor_spl_security.rs",
+    "clean_file": "benchmark/clean/74_rs_slopsquat_anchor_spl_security.rs",
+    "language": "rust",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-PKG-RS",
+    "description": "Hallucinated crate anchor_spl_security (supply-chain slopsquatting risk)",
+    "models_failing": [
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 75,
+    "file": "benchmark/cases/75_rs_insecure_clock_randomness.rs",
+    "clean_file": "benchmark/clean/75_rs_insecure_clock_randomness.rs",
+    "language": "rust",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-RS005",
+    "description": "Solana insecure randomness: using Clock::get() unix_timestamp for lottery seed",
+    "models_failing": [
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 76,
+    "file": "benchmark/cases/76_rs_unjustified_unsafe_block.rs",
+    "clean_file": "benchmark/clean/76_rs_unjustified_unsafe_block.rs",
+    "language": "rust",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-RS001",
+    "description": "Unjustified unsafe block in AI-generated Rust code without safety invariants",
+    "models_failing": [
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 77,
+    "file": "benchmark/cases/77_rs_slopsquat_solana_test_utils.rs",
+    "clean_file": "benchmark/clean/77_rs_slopsquat_solana_test_utils.rs",
+    "language": "rust",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-PKG-RS",
+    "description": "Hallucinated crate solana_program_test_utils (real crate is solana-program-test)",
+    "models_failing": [
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 78,
+    "file": "benchmark/cases/78_rs_obsolete_lazy_static.rs",
+    "clean_file": "benchmark/clean/78_rs_obsolete_lazy_static.rs",
+    "language": "rust",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-RS004",
+    "description": "Obsolete lazy_static! macro emitted instead of modern std::sync::LazyLock",
+    "models_failing": [
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 79,
+    "file": "benchmark/cases/79_rs_truncation_comment_stub.rs",
+    "clean_file": "benchmark/clean/79_rs_truncation_comment_stub.rs",
+    "language": "rust",
+    "category": "AI Anti-Pattern",
+    "expected_rule": "PARRY-ANT-000",
+    "description": "AI truncation stub /* rest of implementation */ wiping signature validation",
+    "models_failing": [
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 80,
+    "file": "benchmark/cases/80_rs_obsolete_try_macro_usage.rs",
+    "clean_file": "benchmark/clean/80_rs_obsolete_try_macro_usage.rs",
+    "language": "rust",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-RS001",
+    "description": "Obsolete Rust 2015 try!() macro call",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 81,
+    "file": "benchmark/cases/81_rs_deprecated_once_init.rs",
+    "clean_file": "benchmark/clean/81_rs_deprecated_once_init.rs",
+    "language": "rust",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-RS002",
+    "description": "Deprecated std::sync::ONCE_INIT constant emitted by model",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 82,
+    "file": "benchmark/cases/82_rs_redundant_collect_vec_len.rs",
+    "clean_file": "benchmark/clean/82_rs_redundant_collect_vec_len.rs",
+    "language": "rust",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-RS003",
+    "description": "O(N) heap allocation .collect::<Vec<_>>().len() to compute count",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 83,
+    "file": "benchmark/cases/83_rs_async_thread_sleep_trap.rs",
+    "clean_file": "benchmark/clean/83_rs_async_thread_sleep_trap.rs",
+    "language": "rust",
+    "category": "Logic",
+    "expected_rule": "PARRY-LOG-RS001",
+    "description": "Blocking thread sleep inside async function starving runtime threads",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 84,
+    "file": "benchmark/cases/84_rs_unchecked_signed_usize_cast.rs",
+    "clean_file": "benchmark/clean/84_rs_unchecked_signed_usize_cast.rs",
+    "language": "rust",
+    "category": "Logic",
+    "expected_rule": "PARRY-LOG-RS002",
+    "description": "Unchecked signed to unsigned integer cast wrapping negative values",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 85,
+    "file": "benchmark/cases/85_rs_hallucinated_tokio_trait.rs",
+    "clean_file": "benchmark/clean/85_rs_hallucinated_tokio_trait.rs",
+    "language": "rust",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-PKG-RS",
+    "description": "Hallucinated crate tokio_async_trait",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 86,
+    "file": "benchmark/cases/86_sol_reentrancy_external_call.sol",
+    "clean_file": "benchmark/clean/86_sol_reentrancy_external_call.sol",
+    "language": "solidity",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-SOL001",
+    "description": "Reentrancy vulnerability: raw ether transfer before updating user balance state",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 87,
+    "file": "benchmark/cases/87_sol_tx_origin_phishing.sol",
+    "clean_file": "benchmark/clean/87_sol_tx_origin_phishing.sol",
+    "language": "solidity",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-SOL002",
+    "description": "Phishing vulnerability: authentication using tx.origin instead of msg.sender",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 88,
+    "file": "benchmark/cases/88_sol_missing_access_control_withdraw.sol",
+    "clean_file": "benchmark/clean/88_sol_missing_access_control_withdraw.sol",
+    "language": "solidity",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-SOL003",
+    "description": "Missing access control modifier (onlyOwner) on critical treasury withdraw function",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 89,
+    "file": "benchmark/cases/89_sol_unchecked_erc20_transfer.sol",
+    "clean_file": "benchmark/clean/89_sol_unchecked_erc20_transfer.sol",
+    "language": "solidity",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-SOL004",
+    "description": "Unchecked ERC-20 transfer return value (reverts silently on non-standard tokens like USDT)",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 90,
+    "file": "benchmark/cases/90_sol_insecure_timestamp_randomness.sol",
+    "clean_file": "benchmark/clean/90_sol_insecure_timestamp_randomness.sol",
+    "language": "solidity",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-SOL005",
+    "description": "Insecure on-chain randomness: block.timestamp and blockhash used for lottery winner seed",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 91,
+    "file": "benchmark/cases/91_sol_missing_zero_address_validation.sol",
+    "clean_file": "benchmark/clean/91_sol_missing_zero_address_validation.sol",
+    "language": "solidity",
+    "category": "Logic",
+    "expected_rule": "PARRY-LOG-SOL001",
+    "description": "Missing zero-address check (address(0)) when transferring contract ownership",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 92,
+    "file": "benchmark/cases/92_sol_signature_replay_missing_nonce.sol",
+    "clean_file": "benchmark/clean/92_sol_signature_replay_missing_nonce.sol",
+    "language": "solidity",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-SOL006",
+    "description": "Signature replay attack vector: ecrecover verified without tracked nonce or domain separator",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 93,
+    "file": "benchmark/cases/93_sol_public_burn_unprotected.sol",
+    "clean_file": "benchmark/clean/93_sol_public_burn_unprotected.sol",
+    "language": "solidity",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-SOL007",
+    "description": "Public burn function lacking authorization check permitting any caller to burn arbitrary tokens",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 94,
+    "file": "benchmark/cases/94_sol_slopsquat_safemath_08.sol",
+    "clean_file": "benchmark/clean/94_sol_slopsquat_safemath_08.sol",
+    "language": "solidity",
+    "category": "Hallucination",
+    "expected_rule": "PARRY-HAL-SOL001",
+    "description": "Redundant and deprecated OpenZeppelin SafeMath imported in Solidity >=0.8",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 95,
+    "file": "benchmark/cases/95_sol_flash_loan_spot_reserves_oracle.sol",
+    "clean_file": "benchmark/clean/95_sol_flash_loan_spot_reserves_oracle.sol",
+    "language": "solidity",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-SOL008",
+    "description": "Flash loan price manipulation: reading spot Uniswap pair reserves instead of TWAP",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 96,
+    "file": "benchmark/cases/96_sol_arbitrary_delegatecall.sol",
+    "clean_file": "benchmark/clean/96_sol_arbitrary_delegatecall.sol",
+    "language": "solidity",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-SOL009",
+    "description": "Arbitrary delegatecall to user-supplied address permitting complete contract takeover",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 97,
+    "file": "benchmark/cases/97_sol_default_variable_visibility.sol",
+    "clean_file": "benchmark/clean/97_sol_default_variable_visibility.sol",
+    "language": "solidity",
+    "category": "Logic",
+    "expected_rule": "PARRY-LOG-SOL002",
+    "description": "State variable declared with default visibility permitting unintended public exposure",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 98,
+    "file": "benchmark/cases/98_sol_ai_truncation_contract_stub.sol",
+    "clean_file": "benchmark/clean/98_sol_ai_truncation_contract_stub.sol",
+    "language": "solidity",
+    "category": "AI Anti-Pattern",
+    "expected_rule": "PARRY-ANT-000",
+    "description": "AI truncation comment // ... rest of contract logic deleting safety modifiers",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 99,
+    "file": "benchmark/cases/99_sol_unchecked_return_call.sol",
+    "clean_file": "benchmark/clean/99_sol_unchecked_return_call.sol",
+    "language": "solidity",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-SOL004",
+    "description": "Unchecked low-level call return value ignoring failed execution",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
+  },
+  {
+    "id": 100,
+    "file": "benchmark/cases/100_sol_centralized_drain_backdoor.sol",
+    "clean_file": "benchmark/clean/100_sol_centralized_drain_backdoor.sol",
+    "language": "solidity",
+    "category": "Security",
+    "expected_rule": "PARRY-SEC-SOL003",
+    "description": "Unprotected emergency withdraw backdoor allowing any caller to drain token pool",
+    "models_failing": [
+      "claude-3.7-sonnet",
+      "gemini-2.0-flash",
+      "gpt-4o",
+      "deepseek-v3",
+      "cursor"
+    ]
   }
 ]
