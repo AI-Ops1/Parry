@@ -141,10 +141,6 @@ jobs:
           sarif_file: parry-results.sarif
 ```
 
-## 💾 Low on `C:` Drive Space on Windows? (`D:\Parry` Setup)
-
-Run `.\use_d_drive.ps1` in PowerShell. It automatically redirects all `Cargo`, `Rustup`, `npm`, `pip`, `uv`, and temp caches into `D:\Parry\.cache` so building and running Parry consumes **0 bytes on your `C:` drive**.
-
 ## 📄 License
 
 Open-source core and 25-case Evil AI Benchmark released under the [MIT License](LICENSE).
