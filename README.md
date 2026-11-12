@@ -82,6 +82,29 @@ python parry.py check path/to/code --format sarif --output parry-results.sarif -
 python parry.py check path/to/code --format pr-comment --diff-base origin/main --exclude tests,dist
 ```
 
+## Turnkey MCP & IDE Agent Hooks (Claude, Cursor, Windsurf, Gemini, Codex)
+
+Wire Parry directly into your AI coding agent and git commit flow in **one command** with `< 20ms` single-file feedback:
+
+```bash
+# Preview all MCP + post-edit + pre-commit hook writes safely (no disk changes)
+python parry.py install-hooks --ide all --instructions --dry-run
+
+# Configure one specific tool (claude | cursor | windsurf | gemini | codex | all)
+python parry.py install-hooks --ide claude --instructions
+python parry.py init --ide cursor --scope user
+
+# Scan only files staged in git (automatically run by .git/hooks/pre-commit)
+python parry.py check --staged
+```
+
+What `install-hooks` configures non-destructively (preserving your existing keys, servers, and hooks):
+- **Claude Code:** `.mcp.json` + `.claude/settings.json` `PostToolUse` hook (`post-edit`) + optional `CLAUDE.md`
+- **Cursor / Windsurf:** `.cursor/mcp.json` / `.windsurf/mcp.json` + optional `.cursorrules` / `.windsurfrules`
+- **Gemini CLI:** `.gemini/settings.json` (`mcpServers.parry`) + optional `GEMINI.md`
+- **OpenAI Codex CLI:** `.codex/config.toml` (`[mcp_servers.parry]`) + optional `AGENTS.md`
+- **Git Pre-Commit:** `.git/hooks/pre-commit` running `parry.py check --staged`
+
 ## GitHub Marketplace Action & PR Shield
 
 Drop Parry directly into any repository via `.github/workflows/parry.yml` to upload SARIF 2.1.0 alerts to the GitHub Security tab and post a single sticky `<!-- parry-pr-shield -->` review comment on pull requests (updated in place on every push):

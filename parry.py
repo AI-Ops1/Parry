@@ -844,11 +844,141 @@ def call_byok_llm_critic(
 # Model Context Protocol (MCP) Server for Gemini, Claude Code, Codex & Cursor
 # ---------------------------------------------------------------------------
 
+def handle_mcp_request(req: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Process one JSON-RPC 2.0 MCP request dictionary and return its response payload, if any."""
+    req_id = req.get("id")
+    method = req.get("method", "")
+    params = req.get("params", {}) or {}
+
+    if method == "initialize":
+        return {
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "result": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {"tools": {}},
+                "serverInfo": {"name": "parry-mcp", "version": "0.1.0"},
+            },
+        }
+
+    if method == "tools/list":
+        return {
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "result": {
+                "tools": [
+                    {
+                        "name": "parry_verify_code",
+                        "description": "Scan AI-generated Rust, Python, TypeScript, or JavaScript code for hallucinated packages, pre-cutoff APIs, security vulnerabilities, and logic bugs.",
+                        "readOnlyHint": True,
+                        "destructiveHint": False,
+                        "idempotentHint": True,
+                        "openWorldHint": False,
+                        "annotations": {
+                            "readOnlyHint": True,
+                            "destructiveHint": False,
+                            "idempotentHint": True,
+                            "openWorldHint": False,
+                        },
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "language": {
+                                    "type": "string",
+                                    "enum": ["python", "rust", "typescript", "javascript"],
+                                },
+                                "file_path": {"type": "string"},
+                                "code": {"type": "string"},
+                            },
+                            "required": ["language", "code"],
+                        },
+                    },
+                    {
+                        "name": "parry_fix_code",
+                        "description": "Auto-remediate deterministic AI hallucinations, deprecated APIs, and security defects, returning patched code and unified diff.",
+                        "readOnlyHint": True,
+                        "destructiveHint": False,
+                        "idempotentHint": True,
+                        "openWorldHint": False,
+                        "annotations": {
+                            "readOnlyHint": True,
+                            "destructiveHint": False,
+                            "idempotentHint": True,
+                            "openWorldHint": False,
+                        },
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "language": {
+                                    "type": "string",
+                                    "enum": ["python", "rust", "typescript", "javascript"],
+                                },
+                                "file_path": {"type": "string"},
+                                "code": {"type": "string"},
+                            },
+                            "required": ["language", "code"],
+                        },
+                    },
+                ]
+            },
+        }
+
+    if method == "tools/call":
+        tool_name = params.get("name")
+        args = params.get("arguments", {}) or {}
+        if tool_name == "parry_verify_code":
+            lang = args.get("language", "python")
+            fpath = args.get("file_path", f"snippet.{lang}")
+            code = args.get("code", "")
+            findings = scan_source(code, fpath, lang)
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": json.dumps([asdict(f) for f in findings], indent=2),
+                        }
+                    ]
+                },
+            }
+
+        if tool_name == "parry_fix_code":
+            lang = args.get("language", "python")
+            fpath = args.get("file_path", f"snippet.{lang}")
+            code = args.get("code", "")
+            findings = scan_source(code, fpath, lang)
+            fixed_code, applied = apply_fixes_to_source(code, findings)
+            diff_str = generate_unified_diff(code, fixed_code, fpath) if applied else ""
+            payload = {
+                "fixed_count": len(applied),
+                "remaining_findings_count": len(findings) - len(applied),
+                "unified_diff": diff_str,
+                "patched_code": fixed_code,
+                "findings": [asdict(f) for f in findings],
+            }
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": json.dumps(payload, indent=2),
+                        }
+                    ]
+                },
+            }
+
+    return None
+
+
 def run_mcp_stdio_server() -> int:
     """
     JSON-RPC 2.0 Model Context Protocol (MCP) server over stdio.
     Allows Claude Code, Claude Desktop, Gemini CLI, OpenAI Codex CLI, Cursor,
-    and Windsurf to call `parry_verify_code` and `parry_run_benchmark`.
+    and Windsurf to call `parry_verify_code` and `parry_fix_code`.
     """
     for raw_line in sys.stdin:
         line = raw_line.strip()
@@ -859,138 +989,10 @@ def run_mcp_stdio_server() -> int:
         except json.JSONDecodeError:
             continue
 
-        req_id = req.get("id")
-        method = req.get("method", "")
-        params = req.get("params", {})
-
-        if method == "initialize":
-            resp = {
-                "jsonrpc": "2.0",
-                "id": req_id,
-                "result": {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {"tools": {}},
-                    "serverInfo": {"name": "parry-mcp", "version": "0.1.0"},
-                },
-            }
+        resp = handle_mcp_request(req)
+        if resp is not None:
             sys.stdout.write(json.dumps(resp) + "\n")
             sys.stdout.flush()
-
-        elif method == "tools/list":
-            resp = {
-                "jsonrpc": "2.0",
-                "id": req_id,
-                "result": {
-                    "tools": [
-                        {
-                            "name": "parry_verify_code",
-                            "description": "Scan AI-generated Rust, Python, TypeScript, or JavaScript code for hallucinated packages, pre-cutoff APIs, security vulnerabilities, and logic bugs.",
-                            "readOnlyHint": True,
-                            "destructiveHint": False,
-                            "idempotentHint": True,
-                            "openWorldHint": False,
-                            "annotations": {
-                                "readOnlyHint": True,
-                                "destructiveHint": False,
-                                "idempotentHint": True,
-                                "openWorldHint": False,
-                            },
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {
-                                    "language": {
-                                        "type": "string",
-                                        "enum": ["python", "rust", "typescript", "javascript"],
-                                    },
-                                    "file_path": {"type": "string"},
-                                    "code": {"type": "string"},
-                                },
-                                "required": ["language", "code"],
-                            },
-                        },
-                        {
-                            "name": "parry_fix_code",
-                            "description": "Auto-remediate deterministic AI hallucinations, deprecated APIs, and security defects, returning patched code and unified diff.",
-                            "readOnlyHint": True,
-                            "destructiveHint": False,
-                            "idempotentHint": True,
-                            "openWorldHint": False,
-                            "annotations": {
-                                "readOnlyHint": True,
-                                "destructiveHint": False,
-                                "idempotentHint": True,
-                                "openWorldHint": False,
-                            },
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {
-                                    "language": {
-                                        "type": "string",
-                                        "enum": ["python", "rust", "typescript", "javascript"],
-                                    },
-                                    "file_path": {"type": "string"},
-                                    "code": {"type": "string"},
-                                },
-                                "required": ["language", "code"],
-                            },
-                        }
-                    ]
-                },
-            }
-            sys.stdout.write(json.dumps(resp) + "\n")
-            sys.stdout.flush()
-
-        elif method == "tools/call":
-            tool_name = params.get("name")
-            args = params.get("arguments", {})
-            if tool_name == "parry_verify_code":
-                lang = args.get("language", "python")
-                fpath = args.get("file_path", f"snippet.{lang}")
-                code = args.get("code", "")
-                findings = scan_source(code, fpath, lang)
-                resp = {
-                    "jsonrpc": "2.0",
-                    "id": req_id,
-                    "result": {
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": json.dumps([asdict(f) for f in findings], indent=2),
-                            }
-                        ]
-                    },
-                }
-                sys.stdout.write(json.dumps(resp) + "\n")
-                sys.stdout.flush()
-
-            elif tool_name == "parry_fix_code":
-                lang = args.get("language", "python")
-                fpath = args.get("file_path", f"snippet.{lang}")
-                code = args.get("code", "")
-                findings = scan_source(code, fpath, lang)
-                fixed_code, applied = apply_fixes_to_source(code, findings)
-                diff_str = generate_unified_diff(code, fixed_code, fpath) if applied else ""
-                payload = {
-                    "fixed_count": len(applied),
-                    "remaining_findings_count": len(findings) - len(applied),
-                    "unified_diff": diff_str,
-                    "patched_code": fixed_code,
-                    "findings": [asdict(f) for f in findings],
-                }
-                resp = {
-                    "jsonrpc": "2.0",
-                    "id": req_id,
-                    "result": {
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": json.dumps(payload, indent=2),
-                            }
-                        ]
-                    },
-                }
-                sys.stdout.write(json.dumps(resp) + "\n")
-                sys.stdout.flush()
     return 0
 
 
@@ -1048,6 +1050,58 @@ def get_changed_files_from_git(diff_base: str) -> Optional[set[pathlib.Path]]:
     if proc.returncode != 0:
         return None
     return {pathlib.Path(line.strip()).resolve() for line in proc.stdout.splitlines() if line.strip()}
+
+
+def scan_staged_files(
+    baseline_fps: Optional[set[str]] = None,
+    exclude_patterns: Optional[List[str]] = None,
+) -> Tuple[List[pathlib.Path], List[Finding]]:
+    """Scan Git staged index blobs (`git diff --cached`) without mixing unstaged edits."""
+    excludes = exclude_patterns or []
+    top_proc = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if top_proc.returncode != 0:
+        raise ValueError("Not inside a git repository; cannot scan --staged files.")
+    repo_root = pathlib.Path(top_proc.stdout.strip())
+
+    diff_proc = subprocess.run(
+        ["git", "-C", str(repo_root), "diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"],
+        capture_output=True,
+        check=False,
+    )
+    if diff_proc.returncode != 0:
+        raise ValueError("Failed to list staged files from git index.")
+
+    raw_names = [
+        chunk.decode("utf-8", errors="replace")
+        for chunk in diff_proc.stdout.split(b"\x00")
+        if chunk
+    ]
+    scanned_paths: List[pathlib.Path] = []
+    findings: List[Finding] = []
+    for rel_name in sorted(raw_names):
+        rel_path = pathlib.Path(rel_name)
+        lang = detect_language(rel_path)
+        if not lang or is_path_excluded(rel_path, excludes):
+            continue
+        blob_proc = subprocess.run(
+            ["git", "-C", str(repo_root), "show", f":{rel_name}"],
+            capture_output=True,
+            check=False,
+        )
+        if blob_proc.returncode != 0:
+            continue
+        source = blob_proc.stdout.decode("utf-8", errors="replace")
+        scanned_paths.append(repo_root / rel_path)
+        file_findings = scan_source(source, rel_name, lang)
+        if baseline_fps:
+            file_findings = [f for f in file_findings if f.fingerprint not in baseline_fps]
+        findings.extend(file_findings)
+    return scanned_paths, findings
 
 
 def collect_target_files(
@@ -1256,7 +1310,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_bench.add_argument("--dir", default=str(pathlib.Path(__file__).parent / "benchmark"), help="Benchmark directory")
 
     p_check = sub.add_parser("check", help="Scan files or directories for AI-written bugs")
-    p_check.add_argument("paths", nargs="+", help="Files or directories to scan")
+    p_check.add_argument("paths", nargs="*", help="Files or directories to scan (optional with --staged)")
+    p_check.add_argument("--staged", action="store_true", help="Scan only files staged in the git index")
     p_check.add_argument("--baseline", default=".parry-baseline.json", help="Baseline suppression file")
     p_check.add_argument("--fix", action="store_true", help="Output LLM prompt patches and deterministic auto-fix diffs")
     p_check.add_argument("--in-place", action="store_true", help="Apply deterministic fixes in-place (requires --fix)")
@@ -1276,9 +1331,41 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_fix.add_argument("paths", nargs="+", help="Files or directories to repair")
     p_fix.add_argument("--dry-run", action="store_true", help="Show proposed diff without modifying files on disk")
 
-    p_init = sub.add_parser("init", help="Initialize baseline suppression file for legacy repos")
+    p_init = sub.add_parser("init", help="Initialize baseline suppression file or IDE MCP/hooks")
     p_init.add_argument("--baseline", action="store_true", help="Write .parry-baseline.json")
-    p_init.add_argument("path", nargs="?", default=".", help="Repository path to baseline")
+    p_init.add_argument("--hook", action="store_true", help="Install git pre-commit hook cleanly")
+    p_init.add_argument(
+        "--ide",
+        choices=["claude", "cursor", "windsurf", "gemini", "codex", "all"],
+        default=None,
+        help="Optional IDE/CLI target to configure MCP + hooks for",
+    )
+    p_init.add_argument("--scope", choices=["workspace", "user"], default="workspace", help="Target config scope")
+    p_init.add_argument("--dry-run", action="store_true", help="Preview changes without writing to disk")
+    p_init.add_argument("--no-pre-commit", action="store_true", help="Skip installing .git/hooks/pre-commit")
+    p_init.add_argument("--no-post-edit", action="store_true", help="Skip installing Claude PostToolUse hook")
+    p_init.add_argument("--instructions", action="store_true", help="Write managed Parry rules block (CLAUDE.md/GEMINI.md/AGENTS.md/.cursorrules)")
+    p_init.add_argument("--json", action="store_true", help="Emit machine-readable action summary JSON")
+    p_init.add_argument("path", nargs="?", default=".", help="Repository or workspace path")
+
+    p_hooks = sub.add_parser("install-hooks", help="Non-destructively configure Parry MCP and hooks for AI coding tools")
+    p_hooks.add_argument(
+        "--ide",
+        choices=["claude", "cursor", "windsurf", "gemini", "codex", "all"],
+        default="all",
+        help="Target AI IDE/CLI tool (default: all)",
+    )
+    p_hooks.add_argument("--scope", choices=["workspace", "user"], default="workspace", help="Config scope: workspace or user")
+    p_hooks.add_argument("--workspace", default=".", help="Workspace root directory")
+    p_hooks.add_argument("--no-pre-commit", action="store_true", help="Skip installing .git/hooks/pre-commit")
+    p_hooks.add_argument("--no-post-edit", action="store_true", help="Skip installing Claude PostToolUse hook")
+    p_hooks.add_argument("--instructions", action="store_true", help="Write managed Parry instruction blocks")
+    p_hooks.add_argument("--dry-run", action="store_true", help="Preview config patches without modifying files")
+    p_hooks.add_argument("--json", action="store_true", help="Emit JSON summary of planned or applied actions")
+
+    p_post = sub.add_parser("post-edit", help="Fast single-file verification for IDE/Claude PostToolUse hooks")
+    p_post.add_argument("path", nargs="?", default=None, help="Edited file path (optional when reading hook JSON from stdin)")
+    p_post.add_argument("--json", action="store_true", help="Emit JSON output")
 
     sub.add_parser("mcp", help="Start JSON-RPC 2.0 MCP Server over stdio for Gemini, Claude, Codex & Cursor")
 
@@ -1290,7 +1377,87 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.cmd == "mcp":
         return run_mcp_stdio_server()
 
+    def _run_ide_bootstrap(ide_name: str, scope: str, ws_path: str, no_pre_commit: bool, no_post_edit: bool, instructions: bool, dry_run: bool, as_json: bool) -> int:
+        from ide_hooks import actions_to_dict_list, install_ide_hooks
+
+        actions = install_ide_hooks(
+            ide=ide_name,
+            scope=scope,
+            workspace=pathlib.Path(ws_path),
+            install_pre_commit=not no_pre_commit,
+            install_post_edit=not no_post_edit,
+            install_instructions=instructions,
+            dry_run=dry_run,
+        )
+        has_error = any(a.status == "error" for a in actions)
+        if as_json:
+            print(json.dumps({"dry_run": dry_run, "actions": actions_to_dict_list(actions)}, indent=2))
+        else:
+            mode_tag = "[DRY-RUN] " if dry_run else ""
+            for act in actions:
+                print(f"{mode_tag}[{act.status.upper()}] ({act.ide}:{act.kind}) {act.path} - {act.detail}")
+        return 1 if has_error else 0
+
+    if args.cmd == "install-hooks":
+        return _run_ide_bootstrap(
+            args.ide,
+            args.scope,
+            args.workspace,
+            args.no_pre_commit,
+            args.no_post_edit,
+            args.instructions,
+            args.dry_run,
+            args.json,
+        )
+
+    if args.cmd == "post-edit":
+        from ide_hooks import extract_post_edit_path
+
+        stdin_payload = "" if args.path or sys.stdin.isatty() else sys.stdin.read()
+        target_path = extract_post_edit_path(stdin_payload, args.path)
+        if target_path is None or not target_path.is_file() or not detect_language(target_path):
+            return 0
+        findings = scan_file(target_path)
+        if not findings:
+            return 0
+        if args.json:
+            print(json.dumps([asdict(f) for f in findings], indent=2))
+        else:
+            print(f"[PARRY POST-EDIT] Detected {len(findings)} issue(s) in {target_path}:", file=sys.stderr)
+            for f in findings:
+                patch = f.prompt_injection_patch or f.suggestion
+                print(f"  - [{f.rule_id}] line {f.line}: {patch}", file=sys.stderr)
+        return 2
+
     if args.cmd == "init":
+        if args.hook and not args.ide:
+            from ide_hooks import actions_to_dict_list, install_git_pre_commit_hook, _default_parry_script, _default_python_executable
+
+            act = install_git_pre_commit_hook(
+                pathlib.Path(args.path).resolve(),
+                _default_python_executable(),
+                _default_parry_script(),
+                dry_run=args.dry_run,
+            )
+            if args.json:
+                print(json.dumps({"dry_run": args.dry_run, "actions": actions_to_dict_list([act])}, indent=2))
+            else:
+                tag = "[DRY-RUN] " if args.dry_run else ""
+                print(f"{tag}[{act.status.upper()}] ({act.ide}:{act.kind}) {act.path} - {act.detail}")
+            return 1 if act.status == "error" else 0
+        if args.ide:
+            rc = _run_ide_bootstrap(
+                args.ide,
+                args.scope,
+                args.path,
+                args.no_pre_commit,
+                args.no_post_edit,
+                args.instructions,
+                args.dry_run,
+                args.json,
+            )
+            if not args.baseline:
+                return rc
         target = pathlib.Path(args.path)
         all_findings: List[Finding] = []
         for child in sorted(target.rglob("*")):
@@ -1300,7 +1467,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             "version": "0.1.0",
             "fingerprints": sorted({f.fingerprint for f in all_findings}),
         }
-        out_file = pathlib.Path(".parry-baseline.json")
+        out_file = target / ".parry-baseline.json" if target.is_dir() else pathlib.Path(".parry-baseline.json")
         out_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         print(f"[OK] Baseline saved to {out_file} ({len(payload['fingerprints'])} existing findings muted).")
         return 0
@@ -1357,10 +1524,21 @@ def main(argv: Optional[List[str]] = None) -> int:
                 )
 
         t0 = time.perf_counter()
-        target_files = collect_target_files(args.paths, exclude_patterns, changed_files)
-        all_findings: List[Finding] = []
-        for tf in target_files:
-            all_findings.extend(scan_file(tf, baseline_fps))
+        if args.staged:
+            if args.paths:
+                print("Error: --staged cannot be combined with explicit paths.", file=sys.stderr)
+                return 2
+            try:
+                target_files, all_findings = scan_staged_files(baseline_fps, exclude_patterns)
+            except ValueError as exc:
+                print(f"Error: {exc}", file=sys.stderr)
+                return 2
+        else:
+            raw_paths = args.paths or ["."]
+            target_files = collect_target_files(raw_paths, exclude_patterns, changed_files)
+            all_findings = []
+            for tf in target_files:
+                all_findings.extend(scan_file(tf, baseline_fps))
         elapsed_ms = (time.perf_counter() - t0) * 1000.0
 
         exit_code = compute_check_exit_code(all_findings, args.fail_on)
