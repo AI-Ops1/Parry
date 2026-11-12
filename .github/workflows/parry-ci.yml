@@ -23,8 +23,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Run 25-Case Evil AI Benchmark
-        run: python3 parry.py bench
+      - name: Run Top-100 Evil AI Benchmark & Leaderboard
+        run: python3 parry.py bench --leaderboard
 
       - name: Run Superpowers TDD Verification Suite
         run: python3 -m unittest discover -v
@@ -41,7 +41,7 @@ jobs:
         uses: ./
         with:
           paths: "."
-          exclude: "benchmark,parry.py,test_parry_benchmark.py,test_parry_fix.py,test_parry_action.py,test_parry_ide_hooks.py"
+          exclude: "benchmark,parry.py,test_parry_benchmark.py,test_parry_fix.py,test_parry_action.py,test_parry_ide_hooks.py,build_top100_benchmark.py"
           fail-on: "warning"
           comment-pr: "true"
           changed-only: "false"
