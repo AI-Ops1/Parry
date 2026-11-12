@@ -1,5 +1,5 @@
 name: "Parry AST Gatekeeper & PR Shield"
-description: "Deflect AI hallucinations, slopsquatted packages, security leaks, and logic traps in <15ms with automatic PR Shield comments and SARIF 2.1.0."
+description: "Deflect AI hallucinations, slopsquatted packages, and logic traps in <15ms with sticky PR Shield comments and SARIF."
 author: "ScopeLedger (AI-Ops1)"
 
 branding:
