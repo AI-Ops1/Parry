@@ -22,6 +22,7 @@ import json
 import os
 import pathlib
 import re
+import subprocess
 import sys
 import time
 import urllib.error
@@ -993,6 +994,219 @@ def run_mcp_stdio_server() -> int:
     return 0
 
 
+DEFAULT_EXCLUDED_DIRS = {
+    ".git",
+    "node_modules",
+    "vendor",
+    "dist",
+    "build",
+    "target",
+    "__pycache__",
+    ".venv",
+    "venv",
+}
+
+PR_SHIELD_MARKER = "<!-- parry-pr-shield -->"
+
+
+def is_path_excluded(file_path: pathlib.Path, exclude_patterns: List[str]) -> bool:
+    """Return True when file_path sits in an excluded directory or matches an explicit pattern."""
+    norm_posix = file_path.as_posix()
+    parts = set(file_path.parts)
+    if parts & DEFAULT_EXCLUDED_DIRS:
+        return True
+    for raw_pat in exclude_patterns:
+        pat = raw_pat.strip().strip("/")
+        if not pat:
+            continue
+        if pat in parts or norm_posix == pat or norm_posix.startswith(pat + "/"):
+            return True
+        if file_path.match(pat):
+            return True
+    return False
+
+
+def get_changed_files_from_git(diff_base: str) -> Optional[set[pathlib.Path]]:
+    """Return resolved changed file paths relative to diff_base...HEAD, or None if unavailable."""
+    clean_ref = diff_base.strip()
+    if not clean_ref or clean_ref.startswith("-") or any(c.isspace() or ord(c) < 32 for c in clean_ref):
+        raise ValueError(f"Unsafe git diff base ref: {diff_base!r}")
+
+    proc = subprocess.run(
+        ["git", "diff", "--name-only", "--diff-filter=ACMRTUXB", f"{clean_ref}...HEAD"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        proc = subprocess.run(
+            ["git", "diff", "--name-only", "--diff-filter=ACMRTUXB", clean_ref],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    if proc.returncode != 0:
+        return None
+    return {pathlib.Path(line.strip()).resolve() for line in proc.stdout.splitlines() if line.strip()}
+
+
+def collect_target_files(
+    raw_paths: List[str],
+    exclude_patterns: Optional[List[str]] = None,
+    changed_only_files: Optional[set[pathlib.Path]] = None,
+) -> List[pathlib.Path]:
+    """Collect supported source files under raw_paths respecting exclusions and optional git diff filter."""
+    excludes = exclude_patterns or []
+    collected: List[pathlib.Path] = []
+    seen: set[pathlib.Path] = set()
+
+    for raw in raw_paths:
+        p = pathlib.Path(raw)
+        candidates: List[pathlib.Path] = []
+        if p.is_dir():
+            candidates = [c for c in sorted(p.rglob("*")) if c.is_file()]
+        elif p.is_file():
+            candidates = [p]
+
+        for child in candidates:
+            if not detect_language(child):
+                continue
+            if is_path_excluded(child, excludes):
+                continue
+            resolved = child.resolve()
+            if changed_only_files is not None and resolved not in changed_only_files:
+                continue
+            if resolved not in seen:
+                seen.add(resolved)
+                collected.append(child)
+
+    return collected
+
+
+def sanitize_markdown_cell(text: str, max_len: int = 240) -> str:
+    """Escape HTML tags, pipes, backticks, and control chars for safe GitHub PR Markdown rendering."""
+    cleaned = re.sub(r"[\x00-\x1f\x7f]+", " ", text).strip()
+    cleaned = (
+        cleaned.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("|", "\\|")
+        .replace("`", "'")
+    )
+    if len(cleaned) > max_len:
+        return cleaned[: max_len - 3] + "..."
+    return cleaned
+
+
+def build_sarif_report(findings: List[Finding]) -> Dict[str, Any]:
+    """Build a SARIF 2.1.0 report compatible with github/codeql-action/upload-sarif."""
+    rules_map: Dict[str, Finding] = {}
+    for f in findings:
+        if f.rule_id not in rules_map:
+            rules_map[f.rule_id] = f
+
+    rules = [
+        {
+            "id": rule_id,
+            "shortDescription": {"text": sample.message},
+            "help": {"text": sample.prompt_injection_patch or sample.suggestion},
+        }
+        for rule_id, sample in rules_map.items()
+    ]
+
+    results = [
+        {
+            "ruleId": f.rule_id,
+            "level": "error" if f.severity == "error" else "warning",
+            "message": {"text": f"{f.message} Fix: {f.prompt_injection_patch or f.suggestion}"},
+            "locations": [
+                {
+                    "physicalLocation": {
+                        "artifactLocation": {"uri": pathlib.Path(f.file_path).as_posix()},
+                        "region": {"startLine": max(1, f.line), "startColumn": max(1, f.column)},
+                    }
+                }
+            ],
+        }
+        for f in findings
+    ]
+
+    return {
+        "version": "2.1.0",
+        "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+        "runs": [
+            {
+                "tool": {
+                    "driver": {
+                        "name": "Parry AST Gatekeeper",
+                        "informationUri": "https://parry.scopeledger.net",
+                        "version": "0.1.0",
+                        "rules": rules,
+                    }
+                },
+                "results": results,
+            }
+        ],
+    }
+
+
+def format_pr_comment_markdown(
+    findings: List[Finding],
+    scanned_count: int,
+    elapsed_ms: float,
+    max_rows: int = 20,
+) -> str:
+    """Render a sticky Parry PR Shield Markdown comment for GitHub pull requests and step summaries."""
+    lines: List[str] = [PR_SHIELD_MARKER]
+    errors_count = sum(1 for f in findings if f.severity == "error")
+    warnings_count = len(findings) - errors_count
+
+    if not findings:
+        lines.append("### 🛡️ Parry PR Shield — Clean AST Diff")
+        lines.append("")
+        lines.append(
+            f"**0** AI hallucinations, leaks, or runtime traps detected across **{scanned_count}** file(s) in `{elapsed_ms:.2f}ms`."
+        )
+    else:
+        lines.append(f"### 🛡️ Parry PR Shield — Deflected {len(findings)} Issue(s)")
+        lines.append("")
+        lines.append(
+            f"Scanned **{scanned_count}** file(s) in `{elapsed_ms:.2f}ms` — **{errors_count} error**, **{warnings_count} warning**."
+        )
+        lines.append("")
+        lines.append("| Severity | Rule | Location | Issue & Auto-Fix |")
+        lines.append("| :--- | :--- | :--- | :--- |")
+        for f in findings[:max_rows]:
+            sev = "🔴 ERROR" if f.severity == "error" else "🟡 WARN"
+            loc = sanitize_markdown_cell(f"{pathlib.Path(f.file_path).as_posix()}:{f.line}", 90)
+            rule = sanitize_markdown_cell(f.rule_id, 40)
+            issue = sanitize_markdown_cell(f.message, 120)
+            fix_hint = sanitize_markdown_cell(f.prompt_injection_patch or f.suggestion, 160)
+            lines.append(f"| {sev} | `{rule}` | `{loc}` | {issue} **Fix:** {fix_hint} |")
+
+        if len(findings) > max_rows:
+            lines.append("")
+            lines.append(
+                f"*Showing top {max_rows} of {len(findings)} findings. Run `python3 parry.py check . --fix` locally for the full diff.*"
+            )
+
+    lines.append("")
+    lines.append("---")
+    lines.append(
+        "*Verified with [Parry AST Gatekeeper](https://parry.scopeledger.net) • Run `python3 parry.py check . --fix` locally or scan any public repo in 3s at [parry.scopeledger.net](https://parry.scopeledger.net/#scan-repo).*"
+    )
+    return "\n".join(lines)
+
+
+def compute_check_exit_code(findings: List[Finding], fail_on: str) -> int:
+    """Compute CLI exit code for check based on --fail-on threshold."""
+    if not findings or fail_on == "none":
+        return 0
+    if fail_on == "error":
+        return 1 if any(f.severity == "error" for f in findings) else 0
+    return 1
+
+
 def run_benchmark(bench_dir: pathlib.Path) -> int:
     manifest_path = bench_dir / "manifest.json"
     if not manifest_path.exists():
@@ -1046,7 +1260,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_check.add_argument("--baseline", default=".parry-baseline.json", help="Baseline suppression file")
     p_check.add_argument("--fix", action="store_true", help="Output LLM prompt patches and deterministic auto-fix diffs")
     p_check.add_argument("--in-place", action="store_true", help="Apply deterministic fixes in-place (requires --fix)")
-    p_check.add_argument("--format", choices=["cli", "json"], default="cli", help="Output format")
+    p_check.add_argument("--format", choices=["cli", "json", "sarif", "pr-comment"], default="cli", help="Output format")
+    p_check.add_argument("--output", default=None, help="Optional file path to write formatted output")
+    p_check.add_argument("--fail-on", choices=["error", "warning", "none"], default="warning", help="Minimum severity triggering exit code 1")
+    p_check.add_argument("--exclude", action="append", default=[], help="Exclude directory or glob pattern")
+    p_check.add_argument("--diff-base", default=None, help="Only scan files changed since git ref (e.g. origin/main)")
     p_check.add_argument(
         "--provider",
         choices=["none", "gemini", "claude", "openai", "codex", "ollama"],
@@ -1121,36 +1339,79 @@ def main(argv: Optional[List[str]] = None) -> int:
             data = json.loads(bpath.read_text(encoding="utf-8"))
             baseline_fps = set(data.get("fingerprints", []))
 
-        all_findings = []
-        target_files: List[pathlib.Path] = []
-        for raw in args.paths:
-            p = pathlib.Path(raw)
-            if p.is_dir():
-                for child in sorted(p.rglob("*")):
-                    if child.is_file() and detect_language(child):
-                        target_files.append(child)
-                        all_findings.extend(scan_file(child, baseline_fps))
-            elif p.is_file():
-                target_files.append(p)
-                all_findings.extend(scan_file(p, baseline_fps))
+        exclude_patterns: List[str] = []
+        for item in args.exclude:
+            exclude_patterns.extend(seg.strip() for seg in item.split(",") if seg.strip())
+
+        changed_files: Optional[set[pathlib.Path]] = None
+        if args.diff_base:
+            try:
+                changed_files = get_changed_files_from_git(args.diff_base)
+            except ValueError as exc:
+                print(f"Error: {exc}", file=sys.stderr)
+                return 2
+            if changed_files is None:
+                print(
+                    f"[WARN] Could not resolve git diff against {args.diff_base}; scanning provided paths instead.",
+                    file=sys.stderr,
+                )
+
+        t0 = time.perf_counter()
+        target_files = collect_target_files(args.paths, exclude_patterns, changed_files)
+        all_findings: List[Finding] = []
+        for tf in target_files:
+            all_findings.extend(scan_file(tf, baseline_fps))
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+
+        exit_code = compute_check_exit_code(all_findings, args.fail_on)
+        rendered: Optional[str] = None
 
         if args.format == "json":
-            print(json.dumps([asdict(f) for f in all_findings], indent=2))
-            return 1 if all_findings else 0
+            rendered = json.dumps([asdict(f) for f in all_findings], indent=2)
+        elif args.format == "sarif":
+            rendered = json.dumps(build_sarif_report(all_findings), indent=2)
+        elif args.format == "pr-comment":
+            rendered = format_pr_comment_markdown(all_findings, len(target_files), elapsed_ms)
+
+        if rendered is not None:
+            if args.output:
+                out_path = pathlib.Path(args.output)
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                out_path.write_text(rendered + "\n", encoding="utf-8")
+            else:
+                print(rendered)
+            return exit_code
 
         if not all_findings:
-            print("[OK] Parry deflected 0 issues (clean diff).")
-            return 0
+            summary = "[OK] Parry deflected 0 issues (clean diff)."
+            if args.output:
+                out_path = pathlib.Path(args.output)
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                out_path.write_text(summary + "\n", encoding="utf-8")
+            else:
+                print(summary)
+            return exit_code
 
+        cli_lines: List[str] = []
         for f in all_findings:
-            print(f"[{f.rule_id}] ({f.category}) {f.file_path}:{f.line}:{f.column} [fn: {f.enclosing_symbol} | fp: {f.fingerprint}]")
-            print(f"  |- Issue: {f.message}")
-            print(f"  +- Fix:   {f.suggestion}")
+            cli_lines.append(
+                f"[{f.rule_id}] ({f.category}) {f.file_path}:{f.line}:{f.column} [fn: {f.enclosing_symbol} | fp: {f.fingerprint}]"
+            )
+            cli_lines.append(f"  |- Issue: {f.message}")
+            cli_lines.append(f"  +- Fix:   {f.suggestion}")
             if args.fix:
                 if f.prompt_injection_patch:
-                    print(f"  +- Agent Prompt: {f.prompt_injection_patch}")
+                    cli_lines.append(f"  +- Agent Prompt: {f.prompt_injection_patch}")
                 if f.suggested_replacement:
-                    print(f"  +- Auto-Patch:   {f.suggested_replacement.strip()}")
+                    cli_lines.append(f"  +- Auto-Patch:   {f.suggested_replacement.strip()}")
+
+        if args.output:
+            out_path = pathlib.Path(args.output)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text("\n".join(cli_lines) + "\n", encoding="utf-8")
+        else:
+            for line in cli_lines:
+                print(line)
 
         if args.fix and args.in_place:
             seen_files = sorted({pathlib.Path(f.file_path) for f in all_findings})
@@ -1160,7 +1421,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                     print(f"[AUTO-FIXED] Applied {len(applied)} repair(s) to {tf}")
                     print(diff_str)
 
-        return 1
+        return exit_code
 
     return 0
 

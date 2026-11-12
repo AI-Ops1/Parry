@@ -76,8 +76,46 @@ python parry.py fix path/to/code
 # 6. Show agent prompt remediation patches & auto-fix diffs
 python parry.py check path/to/code --fix
 
-# 7. Machine-readable JSON output for automated agent pipelines
+# 7. Machine-readable JSON, SARIF 2.1.0, or PR Shield Markdown output
 python parry.py check path/to/code --format json
+python parry.py check path/to/code --format sarif --output parry-results.sarif --fail-on warning
+python parry.py check path/to/code --format pr-comment --diff-base origin/main --exclude tests,dist
+```
+
+## GitHub Marketplace Action & PR Shield
+
+Drop Parry directly into any repository via `.github/workflows/parry.yml` to upload SARIF 2.1.0 alerts to the GitHub Security tab and post a single sticky `<!-- parry-pr-shield -->` review comment on pull requests (updated in place on every push):
+
+```yaml
+name: Parry PR Shield
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+
+jobs:
+  parry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: AI-Ops1/Parry@v1
+        with:
+          paths: "."
+          fail-on: "error"
+          comment-pr: "true"
+          changed-only: "true"
+          sarif-output: "parry-results.sarif"
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('parry-results.sarif') != ''
+        with:
+          sarif_file: parry-results.sarif
 ```
 
 ## 💾 Low on `C:` Drive Space on Windows? (`D:\Parry` Setup)

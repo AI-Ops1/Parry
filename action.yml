@@ -1,0 +1,81 @@
+name: "Parry AST Gatekeeper & PR Shield"
+description: "Deflect AI hallucinations, slopsquatted packages, security leaks, and logic traps in <15ms with automatic PR Shield comments and SARIF 2.1.0."
+author: "ScopeLedger (AI-Ops1)"
+
+branding:
+  icon: "shield"
+  color: "orange"
+
+inputs:
+  paths:
+    description: "Space or comma-separated files or directories to scan"
+    required: false
+    default: "."
+  exclude:
+    description: "Comma or newline-separated directories/globs to skip"
+    required: false
+    default: ""
+  fail-on:
+    description: "Minimum severity triggering failure (error | warning | none)"
+    required: false
+    default: "warning"
+  comment-pr:
+    description: "Post or update sticky Parry PR Shield comment on pull requests"
+    required: false
+    default: "true"
+  sarif-output:
+    description: "Optional file path to emit SARIF 2.1.0 results (e.g. parry-results.sarif)"
+    required: false
+    default: "parry-results.sarif"
+  changed-only:
+    description: "Only audit files changed in the PR diff"
+    required: false
+    default: "false"
+  baseline:
+    description: "Optional baseline suppression file path"
+    required: false
+    default: ".parry-baseline.json"
+  github-token:
+    description: "GitHub token used to post sticky PR Shield comments"
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  findings-count:
+    description: "Total findings detected"
+    value: ${{ steps.parry-run.outputs.findings-count }}
+  errors-count:
+    description: "Total critical/error findings detected"
+    value: ${{ steps.parry-run.outputs.errors-count }}
+  warnings-count:
+    description: "Total warning findings detected"
+    value: ${{ steps.parry-run.outputs.warnings-count }}
+  sarif-file:
+    description: "Path to generated SARIF 2.1.0 file (if configured)"
+    value: ${{ steps.parry-run.outputs.sarif-file }}
+  comment-status:
+    description: "Outcome of PR comment publishing"
+    value: ${{ steps.parry-run.outputs.comment-status }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      with:
+        python-version: "3.11"
+
+    - name: Run Parry AST Gatekeeper & PR Shield
+      id: parry-run
+      shell: bash
+      env:
+        PYTHONPATH: ${{ github.action_path }}
+        INPUT_PATHS: ${{ inputs.paths }}
+        INPUT_EXCLUDE: ${{ inputs.exclude }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_COMMENT_PR: ${{ inputs.comment-pr }}
+        INPUT_SARIF_OUTPUT: ${{ inputs.sarif-output }}
+        INPUT_CHANGED_ONLY: ${{ inputs.changed-only }}
+        INPUT_BASELINE: ${{ inputs.baseline }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: python3 "${{ github.action_path }}/pr_shield_action.py"
