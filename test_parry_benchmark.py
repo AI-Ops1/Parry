@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Superpowers TDD Verification Suite for Parry:
-Gate 1 (CLI/Action), Gate 2 (AST Fingerprinting & IDE Hooks), Gate 3 (Top-100 Evil AI Benchmark & Model Reliability Leaderboard)
+Comprehensive Verification Suite for Parry:
+CLI / Action, AST Fingerprinting, IDE Hooks, and Top-100 Evil AI Benchmark & Model Leaderboard.
 """
 
 import io
@@ -99,7 +99,7 @@ class TestParryEvilBenchmarkAndFingerprinting(unittest.TestCase):
         self.assertIn("Parry Hybrid Engine", md)
 
     def test_fingerprint_survives_line_number_shift(self) -> None:
-        """Verify Gate 2.1: AST-relative SHA-256 fingerprint stays identical when lines are inserted above."""
+        """Verify AST-relative SHA-256 fingerprint stays identical when lines are inserted above."""
         code_v1 = (
             "def record_login(user_id: str, attempts=[]):\n"
             "    attempts.append(user_id)\n"
