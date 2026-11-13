@@ -42,9 +42,9 @@ python parry.py bench --leaderboard
 
 ---
 
-## 🚀 What Parry Does (Gates 1–5 Capabilities)
+## 🚀 What Parry Does
 
-### 1. 🛡️ GitHub Marketplace PR Shield & SARIF Gatekeeper (Gate 1)
+### 1. 🛡️ GitHub Marketplace PR Shield & SARIF Gatekeeper
 Drop Parry into any GitHub CI workflow in 30 seconds.
 - **Sticky PR Shield Comment**: Posts and updates a single sticky PR comment with deflected bugs, severity, and suggested replacements without spamming pull request activity.
 - **AST Baseline Fingerprinting (`.parry-baseline.json`)**: Emits AST-relative SHA-256 fingerprints so PRs only fail on **net-new AI defects** introduced in the PR diff, never failing on pre-existing legacy code debt.
@@ -85,7 +85,7 @@ jobs:
 
 ---
 
-### 2. ⚡ Turnkey AI IDE Hooks & Local MCP Server (Gate 2)
+### 2. ⚡ Turnkey AI IDE Hooks & Local MCP Server
 Stop hallucinated packages and logic bugs before they ever reach a git commit.
 - **1-Command Universal Setup**: Configure Cursor, Claude Code, Windsurf, VS Code, and Codex with one command:
   ```bash
@@ -101,7 +101,7 @@ Stop hallucinated packages and logic bugs before they ever reach a git commit.
 
 ---
 
-### 3. 🧠 Repo-Context Enforcement & Structural AI Slop Rules (Gate 4)
+### 3. 🧠 Repo-Context Enforcement & Structural AI Slop Rules
 Defend against prompt injections and eliminate lazy AI engineering habits.
 - **Prompt Injection Defense for Context Files**:
   Scans `.cursorrules`, `AGENTS.md`, and `CLAUDE.md`. Normalizes Unicode homoglyphs and strips zero-width invisible character evasion attempts (`\u200B`, `\uFEFF`, soft hyphens) used to hijack coding agents.
@@ -117,7 +117,7 @@ Defend against prompt injections and eliminate lazy AI engineering habits.
 
 ---
 
-### 4. 🌐 Team Incident Webhooks & Web3 / Smart Contract Safety (Gate 5)
+### 4. 🌐 Team Incident Webhooks & Web3 / Smart Contract Safety
 - **SSRF-Protected Incident Alerts**: Real-time notifications dispatched to **Slack, Discord, and PagerDuty** whenever high-severity AI vulnerabilities are committed:
   ```bash
   python parry.py check src/ --webhook-url https://hooks.slack.com/services/... --team-enforce
@@ -145,8 +145,8 @@ python parry.py bench --format markdown   # Output leaderboard as Markdown table
 python parry.py check path/to/code        # Scan files or directories
 python parry.py check --staged            # Scan only git staged files (< 15ms)
 python parry.py check --diff-base origin/main # Scan only files changed in PR branch
-python parry.py check --review            # Output Human Review Focus Brief (Gate 4)
-python parry.py check --web3-audit        # Run Web3 protocol security audit (Gate 5)
+python parry.py check --review            # Output Human Review Focus Brief
+python parry.py check --web3-audit        # Run Web3 protocol security audit
 
 # --- REPAIR & AUTO-FIX ---
 python parry.py fix path/to/code          # Automatically repair deterministic defects in-place

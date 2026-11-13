@@ -1067,7 +1067,7 @@ def analyze_structural_slop(
     repo_symbol_index: Optional[Dict[str, List[Tuple[str, int, str]]]] = None,
 ) -> List[Finding]:
     """
-    Gate 4: Deterministic Structural Slop Rules (Zero Formatting Noise)
+    Deterministic Structural Slop Rules (Zero Formatting Noise)
     1. PARRY-SLOP-DUP01: Cross-file duplicate helper detection
     2. PARRY-SLOP-ESC01: Type and safety escape-hatch spikes ('as any', '@ts-ignore', bare except, unwrap)
     3. PARRY-SLOP-LOOP01: Loop N+1 async database/network calls
@@ -2337,7 +2337,7 @@ def resolve_triage_target(raw_target: str) -> Tuple[pathlib.Path, str, bool]:
             cleaned = "https://" + cleaned
         slug = cleaned.rstrip("/").split("github.com/")[-1].replace(".git", "")
         safe_slug = re.sub(r"[^A-Za-z0-9_.-]", "_", slug)
-        cache_base = pathlib.Path("D:/Parry/.cache/triage") if pathlib.Path("D:/Parry").exists() else pathlib.Path(tempfile.gettempdir()) / "parry_triage"
+        cache_base = pathlib.Path(tempfile.gettempdir()) / "parry_triage"
         cache_base.mkdir(parents=True, exist_ok=True)
         clone_dir = cache_base / safe_slug
         if clone_dir.exists():
@@ -2742,7 +2742,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_prospect.add_argument(
         "--out",
         "-o",
-        default="D:/Parry/outreach_queue.md" if pathlib.Path("D:/Parry").exists() else "parry_prospect_queue.md",
+        default="parry_prospect_queue.md",
         help="Output Markdown queue path",
     )
 
