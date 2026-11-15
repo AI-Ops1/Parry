@@ -2122,6 +2122,20 @@ def build_sarif_report(findings: List[Finding]) -> Dict[str, Any]:
     }
 
 
+def format_agent_feedback(findings: List[Finding]) -> str:
+    """
+    Format findings into sub-second, machine-parsable lines for AI coding agent self-correction.
+    Format: PARRY_AGENT_REPAIR | <file>:<line>:<col> | <rule_id> | <message> | REMEDY: <remedy>
+    """
+    if not findings:
+        return "[OK] PARRY_AGENT_CLEAN: 0 issues detected.\n"
+    lines: List[str] = []
+    for f in findings:
+        remedy = f.prompt_injection_patch or f.suggested_replacement or f.suggestion or "Review and fix violation."
+        lines.append(f"PARRY_AGENT_REPAIR | {f.file_path}:{f.line}:{f.column} | {f.rule_id} | {f.message} | REMEDY: {remedy}")
+    return "\n".join(lines) + "\n"
+
+
 def format_human_review_brief(findings: List[Finding]) -> str:
     """
     Format findings into two partitioned sections for human developers:
@@ -2812,7 +2826,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_check.add_argument("--baseline", default=".parry-baseline.json", help="Baseline suppression file")
     p_check.add_argument("--fix", action="store_true", help="Output LLM prompt patches and deterministic auto-fix diffs")
     p_check.add_argument("--in-place", action="store_true", help="Apply deterministic fixes in-place (requires --fix)")
-    p_check.add_argument("--format", choices=["cli", "json", "sarif", "pr-comment"], default="cli", help="Output format")
+    p_check.add_argument("--format", choices=["cli", "json", "sarif", "pr-comment", "agent"], default="cli", help="Output format")
+    p_check.add_argument("--agent", action="store_true", help="Machine-parsable sub-second output mode for AI agents")
     p_check.add_argument("--output", default=None, help="Optional file path to write formatted output")
     p_check.add_argument("--fail-on", choices=["error", "warning", "none"], default="warning", help="Minimum severity triggering exit code 1")
     p_check.add_argument("--exclude", action="append", default=[], help="Exclude directory or glob pattern")
@@ -3079,6 +3094,16 @@ def main(argv: Optional[List[str]] = None) -> int:
                 out_path.write_text(audit_report + "\n", encoding="utf-8")
             else:
                 print(audit_report)
+            return exit_code
+
+        if getattr(args, "agent", False) or args.format == "agent":
+            agent_text = format_agent_feedback(all_findings)
+            if args.output:
+                out_path = pathlib.Path(args.output)
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                out_path.write_text(agent_text, encoding="utf-8")
+            else:
+                sys.stdout.write(agent_text)
             return exit_code
 
         if args.review:
