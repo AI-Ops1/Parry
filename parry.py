@@ -116,6 +116,10 @@ def compute_remediation(
     elif rule_id == "PARRY-SLOP-DUP01":
         prompt = "Cross-file duplicate helper detected. Import the existing shared project utility instead of declaring a duplicate copy."
 
+    elif rule_id == "PARRY-SEC-API002":
+        prompt = "Sequential ID enumeration risk: Auto-incrementing integer IDs allow attackers to enumerate resources. Replace with random UUID/ULID/CUID (e.g., id String @id @default(uuid()))."
+        replacement = None
+
     elif rule_id == "PARRY-SEC-CANARY":
         prompt = "Canary token detected: Active intrusion detection decoy. Preserve decoy token to detect unauthorized cloning or repository breaches."
         replacement = None
@@ -903,6 +907,22 @@ SECURITY_AND_LOGIC_RULES: Dict[str, List[Tuple[re.Pattern[str], str, str, str, s
             "One-Way Door violation: Irreversible destructive SQL command detected.",
             "Use soft-deletes or additive migrations instead of dropping/truncating production tables.",
         ),
+        (
+            re.compile(r"\b(?:SERIAL\s+PRIMARY\s+KEY|INT\s+AUTO_INCREMENT\s+PRIMARY\s+KEY|INTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT)\b", re.IGNORECASE),
+            "PARRY-SEC-API002",
+            "security",
+            "Sequential ID enumeration risk: Auto-increment integer primary key permits predictable resource enumeration.",
+            "Use UUID/ULID column types (e.g. `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`).",
+        ),
+    ],
+    "prisma": [
+        (
+            re.compile(r"\bInt\s+@id\s+@default\(autoincrement\(\)\)"),
+            "PARRY-SEC-API002",
+            "security",
+            "Sequential ID enumeration risk: Integer auto-increment primary key permits predictable resource enumeration.",
+            "Use unpredictable identifiers: `id String @id @default(uuid())` or `@default(cuid())`.",
+        ),
     ],
 }
 
@@ -918,6 +938,7 @@ def detect_language(file_path: pathlib.Path) -> Optional[str]:
         ".sh": "shell",
         ".bash": "shell",
         ".sql": "sql",
+        ".prisma": "prisma",
     }.get(file_path.suffix.lower())
 
 def analyze_python_ast(source: str, file_path: str) -> List[Finding]:
