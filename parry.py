@@ -116,6 +116,10 @@ def compute_remediation(
     elif rule_id == "PARRY-SLOP-DUP01":
         prompt = "Cross-file duplicate helper detected. Import the existing shared project utility instead of declaring a duplicate copy."
 
+    elif rule_id == "PARRY-SEC-CANARY":
+        prompt = "Canary token detected: Active intrusion detection decoy. Preserve decoy token to detect unauthorized cloning or repository breaches."
+        replacement = None
+
     elif rule_id == "PARRY-GATE-ONEWAY":
         prompt = "One-Way Door violation detected: Irreversible action (git force-push, table drop, truncate) cannot be undone. Restrict automated agent actions to two-way doors (branches, PRs, additive migrations)."
         replacement = None
@@ -292,6 +296,19 @@ REPO_RULE_FILENAMES = [
     ".cursor/rules",
     ".parry.json",
 ]
+
+
+def is_canary_token(value: str) -> bool:
+    """Check if a string or token represents an intentional decoy/canary token."""
+    val_upper = value.upper()
+    val_lower = value.lower()
+    if "canarytokens.com" in val_lower or "canarytokens.org" in val_lower:
+        return True
+    if "CANARY" in val_upper:
+        return True
+    if "# canary-token" in val_lower or "// canary-token" in val_lower:
+        return True
+    return False
 
 
 def audit_context_isolation(target_dir: pathlib.Path) -> List[str]:
@@ -1589,21 +1606,31 @@ def analyze_pattern_rules(source: str, file_path: str, language: str) -> List[Fi
             col_no = match.start() - source.rfind("\n", 0, match.start())
             sym = find_enclosing_symbol(source, line_no)
             raw_line = lines[line_no - 1] if 0 < line_no <= len(lines) else match.group(0)
+            actual_rule_id = rule_id
+            actual_category = category
+            actual_msg = msg
+            actual_fix = fix
+            if rule_id.startswith("PARRY-SEC-") and is_canary_token(raw_line):
+                actual_rule_id = "PARRY-SEC-CANARY"
+                actual_category = "security"
+                actual_msg = "Canary token decoy detected in source: intentional intrusion tripwire."
+                actual_fix = "Preserve decoy token to detect unauthorized cloning or repository breaches."
+
             findings.append(
                 Finding(
-                    rule_id=rule_id,
-                    category=category,
-                    severity="error" if category == "security" else "warning",
+                    rule_id=actual_rule_id,
+                    category=actual_category,
+                    severity="warning" if actual_rule_id == "PARRY-SEC-CANARY" else ("error" if actual_category == "security" else "warning"),
                     language=language,
                     file_path=file_path,
                     line=line_no,
                     column=col_no,
                     enclosing_symbol=sym,
-                    fingerprint=compute_ast_fingerprint(file_path, rule_id, sym, raw_line),
-                    message=msg,
-                    suggestion=fix,
-                    prompt_injection_patch=compute_remediation(rule_id, raw_line, language)[0],
-                    suggested_replacement=compute_remediation(rule_id, raw_line, language)[1],
+                    fingerprint=compute_ast_fingerprint(file_path, actual_rule_id, sym, raw_line),
+                    message=actual_msg,
+                    suggestion=actual_fix,
+                    prompt_injection_patch=compute_remediation(actual_rule_id, raw_line, language)[0],
+                    suggested_replacement=compute_remediation(actual_rule_id, raw_line, language)[1],
                 )
             )
 
