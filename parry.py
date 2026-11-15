@@ -294,6 +294,46 @@ REPO_RULE_FILENAMES = [
 ]
 
 
+def audit_context_isolation(target_dir: pathlib.Path) -> List[str]:
+    """
+    Audit AI IDE context isolation:
+    1. Checks if sensitive files (.env, *.pem, *.key, id_rsa) exist but are missing from .cursorignore.
+    2. Checks if context instruction files (.cursorrules, AGENTS.md, CLAUDE.md, GEMINI.md) contain raw credentials.
+    """
+    issues: List[str] = []
+    cursorignore = target_dir / ".cursorignore"
+    ignored_patterns = set()
+    if cursorignore.exists():
+        for line in cursorignore.read_text(encoding="utf-8", errors="ignore").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#"):
+                ignored_patterns.add(line)
+
+    sensitive_candidates = [".env", ".env.local", ".env.production", "id_rsa", "id_ed25519", "credentials.json"]
+    for cand in sensitive_candidates:
+        cand_path = target_dir / cand
+        if cand_path.exists():
+            covered = any(
+                cand == pat or (pat.endswith("*") and cand.startswith(pat[:-1])) or pat in cand
+                for pat in ignored_patterns
+            )
+            if not covered:
+                issues.append(
+                    f"Sensitive file `{cand}` is present but missing from `.cursorignore`. AI agents may ingest credentials into context."
+                )
+
+    secret_pattern = re.compile(r"\b(?:AKIA[0-9A-Z]{16}|ghp_[a-zA-Z0-9]{36}|sk-[a-zA-Z0-9]{32,}|xox[baprs]-[0-9a-zA-Z]{10,})\b")
+    context_files = [".cursorrules", "AGENTS.md", "CLAUDE.md", "GEMINI.md"]
+    for cf in context_files:
+        cf_path = target_dir / cf
+        if cf_path.exists():
+            c_text = cf_path.read_text(encoding="utf-8", errors="ignore")
+            if secret_pattern.search(c_text):
+                issues.append(f"Context instruction file `{cf}` contains an exposed secret or API key.")
+
+    return issues
+
+
 def discover_and_sanitize_repo_context(
     workspace_root: pathlib.Path, max_file_bytes: int = 65536
 ) -> Tuple[Dict[str, str], bool]:
