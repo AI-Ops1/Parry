@@ -116,6 +116,10 @@ def compute_remediation(
     elif rule_id == "PARRY-SLOP-DUP01":
         prompt = "Cross-file duplicate helper detected. Import the existing shared project utility instead of declaring a duplicate copy."
 
+    elif rule_id == "PARRY-GATE-ONEWAY":
+        prompt = "One-Way Door violation detected: Irreversible action (git force-push, table drop, truncate) cannot be undone. Restrict automated agent actions to two-way doors (branches, PRs, additive migrations)."
+        replacement = None
+
     elif rule_id == "PARRY-SEC-API001":
         prompt = "OWASP API #1 IDOR detected: Database lookup by resource ID without ownership verification. Validate that the resource belongs to authenticated user/session (e.g., WHERE id = :id AND user_id = :userId)."
 
@@ -557,6 +561,13 @@ SECURITY_AND_LOGIC_RULES: Dict[str, List[Tuple[re.Pattern[str], str, str, str, s
             "Unclosed file descriptor leak: file opened without with context manager.",
             "Use with open(fpath, 'r', encoding='utf-8') as f:.",
         ),
+        (
+            re.compile(r"git['\"],\s*['\"]push['\"],\s*['\"](?:--force|-f)['\"]|git\s+push\s+(?:--force|-f)\b|\bDROP\s+(?:TABLE|DATABASE)\b|\bTRUNCATE\s+(?:TABLE\s+)?[a-zA-Z_]\w*\b", re.IGNORECASE),
+            "PARRY-GATE-ONEWAY",
+            "security",
+            "One-Way Door violation: Irreversible destructive command detected in script.",
+            "Avoid irreversible actions (git push -f, DROP TABLE). Restrict automated agents to two-way doors.",
+        ),
 
     ],
     "typescript": [
@@ -818,6 +829,24 @@ SECURITY_AND_LOGIC_RULES: Dict[str, List[Tuple[re.Pattern[str], str, str, str, s
             "Declare state variable with private or internal visibility.",
         ),
     ],
+    "shell": [
+        (
+            re.compile(r"git\s+push\s+(?:--force|-f)\b|git\s+reset\s+--hard\b|\bDROP\s+(?:TABLE|DATABASE)\b|\bTRUNCATE\s+(?:TABLE\s+)?[a-zA-Z_]\w*\b", re.IGNORECASE),
+            "PARRY-GATE-ONEWAY",
+            "security",
+            "One-Way Door violation: Irreversible destructive action detected in shell script.",
+            "Avoid irreversible actions (git push --force, DROP TABLE). Use reversible PR workflows.",
+        ),
+    ],
+    "sql": [
+        (
+            re.compile(r"\bDROP\s+(?:TABLE|DATABASE)\b|\bTRUNCATE\s+(?:TABLE\s+)?[a-zA-Z_]\w*\b", re.IGNORECASE),
+            "PARRY-GATE-ONEWAY",
+            "security",
+            "One-Way Door violation: Irreversible destructive SQL command detected.",
+            "Use soft-deletes or additive migrations instead of dropping/truncating production tables.",
+        ),
+    ],
 }
 
 def detect_language(file_path: pathlib.Path) -> Optional[str]:
@@ -829,6 +858,9 @@ def detect_language(file_path: pathlib.Path) -> Optional[str]:
         ".js": "javascript",
         ".jsx": "javascript",
         ".sol": "solidity",
+        ".sh": "shell",
+        ".bash": "shell",
+        ".sql": "sql",
     }.get(file_path.suffix.lower())
 
 def analyze_python_ast(source: str, file_path: str) -> List[Finding]:
