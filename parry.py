@@ -116,6 +116,9 @@ def compute_remediation(
     elif rule_id == "PARRY-SLOP-DUP01":
         prompt = "Cross-file duplicate helper detected. Import the existing shared project utility instead of declaring a duplicate copy."
 
+    elif rule_id == "PARRY-SEC-API001":
+        prompt = "OWASP API #1 IDOR detected: Database lookup by resource ID without ownership verification. Validate that the resource belongs to authenticated user/session (e.g., WHERE id = :id AND user_id = :userId)."
+
     elif rule_id == "PARRY-HAL-RS001":
         prompt = "Obsolete Rust 2015 try!(...) macro detected. Replace 'try!(expr)' with 'expr?'."
         m = re.search(r"\btry!\s*\(", raw_line)
@@ -634,6 +637,16 @@ SECURITY_AND_LOGIC_RULES: Dict[str, List[Tuple[re.Pattern[str], str, str, str, s
             "JWT verification explicitly permitting 'none' algorithm.",
             "Enforce robust cryptographic algorithms such as RS256 or HS256.",
         ),
+        (
+            re.compile(
+                r"(?:findUnique|findOne|findFirst)\s*\(\s*\{[\s\S]*?where\s*:\s*\{(?![^}]*\b(?:userId|user_id|owner_id|req\.user|account_id)\b)[^}]*id\s*:\s*(?:req\.)?params\.id[^}]*\}[\s\S]*?\}\s*\)|(?:\.findByPk|\.findById)\s*\(\s*(?:req\.)?params\.id\s*\)"
+            ),
+            "PARRY-SEC-API001",
+            "security",
+            "Potential OWASP API #1 IDOR: Database query by ID parameter without user/tenant ownership check.",
+            "Scope database query to session user: `where: { id: req.params.id, userId: req.user.id }`.",
+        ),
+
     ],
     "javascript": [
         (
@@ -664,6 +677,16 @@ SECURITY_AND_LOGIC_RULES: Dict[str, List[Tuple[re.Pattern[str], str, str, str, s
             "Accidental global variable assignment leaking transaction across requests.",
             "Declare variable with const or let.",
         ),
+        (
+            re.compile(
+                r"(?:findUnique|findOne|findFirst)\s*\(\s*\{[\s\S]*?where\s*:\s*\{(?![^}]*\b(?:userId|user_id|owner_id|req\.user|account_id)\b)[^}]*id\s*:\s*(?:req\.)?params\.id[^}]*\}[\s\S]*?\}\s*\)|(?:\.findByPk|\.findById)\s*\(\s*(?:req\.)?params\.id\s*\)"
+            ),
+            "PARRY-SEC-API001",
+            "security",
+            "Potential OWASP API #1 IDOR: Database query by ID parameter without user/tenant ownership check.",
+            "Scope database query to session user: `where: { id: req.params.id, userId: req.user.id }`.",
+        ),
+
     ],
     "rust": [
         (
